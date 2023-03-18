@@ -2,9 +2,7 @@
     "name": "SatorImaging.UnitySourceGenerator",
     "rootNamespace": "SatorImaging.UnitySourceGenerator",
     "references": [],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
