@@ -6,11 +6,13 @@ namespace SatorImaging.UnitySourceGenerator
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class UnitySourceGeneratorAttribute : Attribute
     {
-        public UnitySourceGeneratorAttribute()
+        public UnitySourceGeneratorAttribute(Type generatorClass = null)
         {
+            GeneratorClass = generatorClass;
         }
 
         public bool OverwriteIfFileExists { get; set; } = false;
+        public Type GeneratorClass { get; set; }
 
     }
 }
