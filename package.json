@@ -1,0 +1,31 @@
+{
+  "name": "com.sator-imaging.alt-source-generator",
+  "displayName": "Alternative Source Generator for Unity",
+  "version": "1.0.0",
+  "unity": "2021.3",
+  "description": "Ease-of-Use Source Generator Alternative for Unity.",
+  "author": {
+    "name": "Sator Imaging",
+    "url": "https://twitter.com/sator_imaging"
+  },
+  "category": "Source Generator",
+  "keywords": [
+    "Unity",
+    "Source",
+    "Generator",
+    "Alternative",
+    "Scripting",
+    "Asset",
+    "Postprocessor"
+  ],
+  "dependencies": {
+  },
+  "repository": {
+    "type": "git",
+    "url":            "https://github.com/sator-imaging/Unity-AltSourceGenerator.git"
+  },
+  "url":              "https://github.com/sator-imaging/Unity-AltSourceGenerator.git",
+  "documentationUrl": "https://github.com/sator-imaging/Unity-AltSourceGenerator",
+  "changelogUrl":     "https://github.com/sator-imaging/Unity-AltSourceGenerator",
+  "licensesUrl":      "https://www.sator-imaging.com/"
+}
