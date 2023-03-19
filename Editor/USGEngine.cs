@@ -60,36 +60,38 @@ namespace SatorImaging.UnitySourceGenerator
         static void OnPostprocessAllAssets(
             string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
+            // NOTE: Do NOT handle deleted assets because Unity tracking changes perfectly.
+            //       Even if delete file while Unity shutted down, asset deletion event happens on next Unity launch.
+            //       As a result, delete/import event loops infinitely and file cannot be deleted.
             for (int i = 0; i < importedAssets.Length; i++)
             {
                 AddAppropriateTarget(importedAssets[i]);
             }
 
-            // NOTE: Do NOT handle deleted assets because Unity tracking changes perfectly.
-            //       Even if delete file while Unity shutted down, asset deletion event happens on next Unity launch.
-            //       As a result, delete/import event loops infinitely and file cannot be deleted.
             if (s_processingJobQueued) return;
             s_processingJobQueued = true;
 
-            // NOTE: need to stack jobs. nesting delayCall's causes error.
-            EditorApplication.delayCall += static () =>
+            // TODO: Unity sometimes reloads updated scripts by Visual Studio in background automatically.
+            //       In this situation, code generation will be done with script data right before saving.
+            //       It cannot be solved on C#, simply restart Unity.
+            //       Using [DidReloadScripts] or EditorApplication.delayCall, It works fine with Reimport
+            //       menu command but OnPostprocessAllAssets event doesn't work as expected.
+            //       (script runs with static field cleared even though .Clear() is only in ProcessingFiles())
+            ////EditorApplication.delayCall += () =>
             {
                 ProcessingFiles();
-                s_updatedGeneratorJob?.Invoke();
-                s_updatedGeneratorJob = null;
-
-                IgnoreOverwriteSettingByAttribute = false;  // always turn it off.
-                s_processingJobQueued = false;
             };
         }
 
-        static Action s_updatedGeneratorJob = null;
+
         readonly static HashSet<string> s_updatedGeneratorNames = new();
         static void ProcessingFiles()
         {
+            bool somethingUpdated = false;
             foreach (string path in s_targetFilePaths)
             {
-                ProcessFile(path);
+                if (ProcessFile(path))
+                    somethingUpdated = true;
             }
 
             // TODO: more efficient way to process related targets
@@ -100,19 +102,30 @@ namespace SatorImaging.UnitySourceGenerator
                     if (info.TargetClass == null) continue;
                     if (info.Attribute.GeneratorClass?.Name != generatorName) continue;
 
-                    s_updatedGeneratorJob += () => USGUtility.ForceGenerate(info.TargetClass.Name, false);
+                    var path = USGUtility.GetScriptFileByName(info.TargetClass.Name);
+                    if (path != null)
+                    {
+                        IgnoreOverwriteSettingByAttribute = true;
+                        if (ProcessFile(path))
+                            somethingUpdated = true;
+                    }
                 }
             }
+
+            if (somethingUpdated)
+                AssetDatabase.Refresh();
+            s_targetFilePaths.Clear();
             s_updatedGeneratorNames.Clear();
 
-            if (s_targetFilePaths.Count() > 0) AssetDatabase.Refresh();
-            s_targetFilePaths.Clear();
+            IgnoreOverwriteSettingByAttribute = false;  // always turn it off.
+            s_processingJobQueued = false;
         }
 
 
         ///<summary>This method respects "OverwriteIfFileExists" attribute setting.</summary>
         ///<param name="assetsRelPath">Path need to be started with "Assets/"</param>
-        public static void ProcessFile(string assetsRelPath)
+        ///<returns>true if file is written</returns>
+        public static bool ProcessFile(string assetsRelPath)
         {
             if (!File.Exists(assetsRelPath)) throw new FileNotFoundException(assetsRelPath);
 
@@ -122,35 +135,35 @@ namespace SatorImaging.UnitySourceGenerator
             if (!s_typeNameToInfo.ContainsKey(clsName))
             {
                 if (!clsName.EndsWith(GENERATOR_EXT))
-                    return;
+                    return false;
 
                 // try find generator
                 clsName = Path.GetFileNameWithoutExtension(clsName);
                 clsName = Path.GetExtension(clsName);
 
-                if (clsName.Length == 0) return;
+                if (clsName.Length == 0) return false;
                 clsName = clsName.Substring(1);
 
                 if (!s_typeNameToInfo.ContainsKey(clsName))
-                    return;
+                    return false;
             }
 
 
             var info = s_typeNameToInfo[clsName];
-            if (info == null) return;
+            if (info == null) return false;
 
             // TODO: more streamlined.
             if (info.TargetClass == null)
             {
                 s_updatedGeneratorNames.Add(clsName);
-                return;
+                return false;
             }
 
 
             if (!TryBuildOutputFileName(info))
             {
                 Debug.LogError($"[{nameof(UnitySourceGenerator)}] Output file name is invalid: {info.OutputFileName}");
-                return;
+                return false;
             }
 
             var generatorCls = info.Attribute.GeneratorClass ?? info.TargetClass;
@@ -187,25 +200,25 @@ namespace SatorImaging.UnitySourceGenerator
             }
 
             if (!isSaveFile || sb == null || string.IsNullOrWhiteSpace(context.OutputPath))
-                return;
+                return false;
 
 
-            //file check
+
             var outputDir = Path.GetDirectoryName(context.OutputPath);
             if (!Directory.Exists(outputDir)) Directory.CreateDirectory(outputDir);
-
 
             if (File.Exists(context.OutputPath) &&
                 (!info.Attribute.OverwriteIfFileExists && !IgnoreOverwriteSettingByAttribute)
                 )
             {
-                return;
+                return false;
             }
 
 
             File.WriteAllText(context.OutputPath, sb.ToString());
             Debug.Log($"[{nameof(UnitySourceGenerator)}] Generated: {context.OutputPath}");
 
+            return true;
         }
 
 

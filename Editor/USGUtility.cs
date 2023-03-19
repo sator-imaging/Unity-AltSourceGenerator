@@ -28,6 +28,18 @@ namespace SatorImaging.UnitySourceGenerator
 
         public static void ForceGenerate(string clsName, bool showInProjectPanel = true)
         {
+            var path = GetScriptFileByName(clsName);
+            if (path == null) return;
+
+            if (showInProjectPanel)
+                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(path));
+            USGEngine.IgnoreOverwriteSettingByAttribute = true;  // always disabled after import event.
+            AssetDatabase.ImportAsset(path);
+        }
+
+
+        internal static string GetScriptFileByName(string clsName)
+        {
             var GUIDs = AssetDatabase.FindAssets(clsName);
             foreach (var GUID in GUIDs)
             {
@@ -35,16 +47,10 @@ namespace SatorImaging.UnitySourceGenerator
                 var fileName = Path.GetFileNameWithoutExtension(path);
                 if (fileName != clsName) continue;
 
-                if (showInProjectPanel)
-                    EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(path));
-
-
-                USGEngine.IgnoreOverwriteSettingByAttribute = true;  // always disabled after import event.
-                AssetDatabase.ImportAsset(path);
-                return;
+                return path;
             }
+            return null;
         }
-
 
     }
 }
