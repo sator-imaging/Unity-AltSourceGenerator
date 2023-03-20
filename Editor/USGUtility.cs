@@ -26,15 +26,29 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
-        ///<summary>UNSAFE on use in build event due to this method calls fancy UI methods and fire import event. Use `GetAssetPathByName()` instead.</summary>
-        public static void ForceGenerateInEditor(string clsName, bool showInProjectPanel = true)
+        ///<summary>Force perform source code generation by class name.</summary>
+        ///<param name="showInProjectPanel">works only when Unity is not building app.</param>
+        public static void ForceGenerateByName(string clsName, bool showInProjectPanel = true)
         {
             var path = GetAssetPathByName(clsName);
             if (path == null) return;
 
+
+            USGEngine.IgnoreOverwriteSettingByAttribute = true;  // always disabled after import event.
+
+            // NOTE: Invoking unity editor event while building app causes fatal error.
+            //       just generate code and not need to import it.
+            if (BuildPipeline.isBuildingPlayer)
+            {
+                USGEngine.ProcessFile(path);
+                return;
+            }
+
+            // NOTE: When working in Unity Editor, Do NOT perform ProcessFile(...).
+            //       It will generate code correctly but generated source code is not imported.
+            //       To see changes, you need to import script and as you imagine, code generation happens again.
             if (showInProjectPanel)
                 EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(path));
-            USGEngine.IgnoreOverwriteSettingByAttribute = true;  // always disabled after import event.
             AssetDatabase.ImportAsset(path);
         }
 

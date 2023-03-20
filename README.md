@@ -208,10 +208,10 @@ There are utility functions to perform source code generation on build event.
 
 
 ```csharp
-// search by class name if you don't know where it is.
-var assetPath = USGUtility.GetAssetPathByName(nameof(MinimalGenerator));
+// perform code generation by class name if you don't know where it is.
+USGUtility.ForceGenerateByName(nameof(MinimalGenerator));
 
-// perform code generation.
+// perform code generation by known path.
 USGEngine.IgnoreOverwriteSettingByAttribute = true;  // force overwrite
 USGEngine.ProcessFile(assetPath);
 ```

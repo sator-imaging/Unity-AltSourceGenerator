@@ -195,6 +195,8 @@ namespace SatorImaging.UnitySourceGenerator
             if (!isSaveFile || sb == null || string.IsNullOrWhiteSpace(context.OutputPath))
                 return false;
 
+            // NOTE: overwrite check must be done after Emit() due to allowing output path modification.
+            // TODO: code generation happens but file is not written. any way to skip code generation?
             if (File.Exists(context.OutputPath) &&
                 (!info.Attribute.OverwriteIfFileExists && !IgnoreOverwriteSettingByAttribute)
                 )
