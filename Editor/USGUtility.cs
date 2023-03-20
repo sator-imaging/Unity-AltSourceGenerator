@@ -34,6 +34,7 @@ namespace SatorImaging.UnitySourceGenerator
             if (path == null) return;
 
 
+            var restoreOverwriteSetting = USGEngine.IgnoreOverwriteSettingByAttribute;
             USGEngine.IgnoreOverwriteSettingByAttribute = true;  // always disabled after import event.
 
             // NOTE: Invoking unity editor event while building app causes fatal error.
@@ -41,6 +42,8 @@ namespace SatorImaging.UnitySourceGenerator
             if (BuildPipeline.isBuildingPlayer)
             {
                 USGEngine.ProcessFile(path);
+                // because of Editor event doesn't happens.
+                USGEngine.IgnoreOverwriteSettingByAttribute = restoreOverwriteSetting;
                 return;
             }
 
