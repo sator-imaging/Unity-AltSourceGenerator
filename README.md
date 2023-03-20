@@ -36,6 +36,8 @@ As you already know, Roslyn's source generator is too sophisticated. This framew
 - [Copyright](#copyright)
 - [License](#license)
 - [Devnote](#devnote)
+    - [TODO](#todo)
+    - [Memo](#memo)
 
 <!------- End of Details EN Tag -------></details></p>
 
@@ -132,7 +134,7 @@ namespace Sample
 
 Here is target-less generator example.
 
-It is useful to generate static database that cannot be generated on Unity runtime. For example, asset GUIDs database, resource integrity tables, etc.
+It is useful to generate static database that cannot be generated on Unity runtime. For example, build asset GUIDs database using `UnityEditor.AssetDatabase`, resource integrity tables, etc.
 
 
 
@@ -206,12 +208,12 @@ There are utility functions to perform source code generation on build event.
 
 
 ```csharp
-// perform by known asset path.
-USGEngine.IgnoreOverwriteSettingByAttribute = true;  // force overwrite
-USGEngine.ProcessFile(pathToGeneratorScriptFile);
+// search by class name if you don't know where it is.
+var assetPath = USGUtility.GetAssetPathByName(nameof(MinimalGenerator));
 
-// search by class name.
-USGUtility.ForceGenerate(nameof(MinimalGenerator));
+// perform code generation.
+USGEngine.IgnoreOverwriteSettingByAttribute = true;  // force overwrite
+USGEngine.ProcessFile(assetPath);
 ```
 
 
@@ -354,5 +356,17 @@ SOFTWARE.
 &nbsp;
 
 # Devnote
+
+
+## TODO
+
+- Add new attribute option `UseCustomWriter` to use it's own file writer instead of builtin writer. For the "non-allocation" addicted developers.
+    - `USGEngine.ProcessingFile()` doesn't care what happens in custom writer. just returns true in this situation.
+    - Option is for generator class. Referenced generator class doesn't have `UnitySourceGenerator` attribute so that need to retrieve it from target classes. (how handle conflicts?)
+    - `USGContext.UseCustomWriter` can be used to prevent writing file but `StringBuilder` is built prior to `Emit()` method.
+
+
+
+## Memo
 
 Unity doesn't invoke import event if Visual Studio is not launch by current session of Unity...?

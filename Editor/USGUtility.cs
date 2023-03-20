@@ -26,9 +26,10 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
-        public static void ForceGenerate(string clsName, bool showInProjectPanel = true)
+        ///<summary>UNSAFE on use in build event due to this method calls fancy UI methods and fire import event. Use `GetAssetPathByName()` instead.</summary>
+        public static void ForceGenerateInEditor(string clsName, bool showInProjectPanel = true)
         {
-            var path = GetScriptFileByName(clsName);
+            var path = GetAssetPathByName(clsName);
             if (path == null) return;
 
             if (showInProjectPanel)
@@ -38,7 +39,8 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
-        internal static string GetScriptFileByName(string clsName)
+        ///<summary>Returns "Assets/" rooted path of the script file.</summary>
+        public static string GetAssetPathByName(string clsName)
         {
             var GUIDs = AssetDatabase.FindAssets(clsName);
             foreach (var GUID in GUIDs)

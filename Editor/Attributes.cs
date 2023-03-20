@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace SatorImaging.UnitySourceGenerator
 {
@@ -6,13 +7,17 @@ namespace SatorImaging.UnitySourceGenerator
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class UnitySourceGeneratorAttribute : Attribute
     {
+        Type generatorClass;
+
         public UnitySourceGeneratorAttribute(Type generatorClass = null)
         {
-            GeneratorClass = generatorClass;
+            this.generatorClass = generatorClass;
         }
 
-        public bool OverwriteIfFileExists { get; set; } = false;
-        public Type GeneratorClass { get; set; }
+        public Type GeneratorClass => generatorClass;
+
+        public bool OverwriteIfFileExists { get; set; } = true;
+        public Encoding OutputFileEncoding { get; set; } = Encoding.UTF8;
 
     }
 }
