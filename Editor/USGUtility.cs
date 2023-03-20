@@ -39,7 +39,8 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
-        ///<summary>Returns "Assets/" rooted path of the script file.</summary>
+        ///<summary>Returns "Assets/" or "Packages/" starting path to the script. (relative path from Unity project directory)</summary>
+        ///<returns>null if not found</returns>
         public static string GetAssetPathByName(string clsName)
         {
             var GUIDs = AssetDatabase.FindAssets(clsName);

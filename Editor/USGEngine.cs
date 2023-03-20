@@ -213,12 +213,12 @@ namespace SatorImaging.UnitySourceGenerator
             {
                 Span<byte> buffer = stackalloc byte[BUFFER_LENGTH];
                 var span = sb.ToString().AsSpan();
-                for (int i = 0; i < span.Length; i += BUFFER_MAX_CHAR_LENGTH)
+                for (int start = 0; start < span.Length; start += BUFFER_MAX_CHAR_LENGTH)
                 {
                     var len = BUFFER_MAX_CHAR_LENGTH;
-                    if (len + i > span.Length) len = span.Length - i;
+                    if (len + start > span.Length) len = span.Length - start;
 
-                    int written = info.Attribute.OutputFileEncoding.GetBytes(span.Slice(i, len), buffer);
+                    int written = info.Attribute.OutputFileEncoding.GetBytes(span.Slice(start, len), buffer);
                     fs.Write(buffer.Slice(0, written));
                 }
                 fs.Flush();
