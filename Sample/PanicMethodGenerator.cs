@@ -5,7 +5,7 @@ namespace Sample
 {
     // HOW TO USE: Add the following attribute to *target* class.
     //             Note that target class must be defined as partial.
-    // [UnitySourceGenerator(typeof(Sample.PanicMethodGenerator)]
+    // [UnitySourceGenerator(typeof(Sample.PanicMethodGenerator))]
     public class PanicMethodGenerator
     {
         static string OutputFileName() => "PanicMethod.cs";  // -> PanicMethod.<TargetClass>.<GeneratorClass>.g.cs

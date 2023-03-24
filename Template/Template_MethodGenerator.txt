@@ -1,0 +1,53 @@
+#if UNITY_EDITOR
+#pragma warning disable IDE0051
+
+using SatorImaging.UnitySourceGenerator;
+using System.Text;
+using Debug = UnityEngine.Debug;
+
+#ROOTNAMESPACEBEGIN#
+    // HOW TO USE: Add the following attribute to *target* class.
+    //             Note that target class must be defined as partial.
+    // [UnitySourceGenerator(typeof(#SCRIPTNAME#), OverwriteIfFileExists = false)]
+    public class #SCRIPTNAME#
+    {
+        const string METHOD_NAME = "Panic";
+        static string OutputFileName() => METHOD_NAME + ".cs";  // -> Panic.<TargetClass>.<GeneratorClass>.g.cs
+
+        static bool Emit(USGContext context, StringBuilder sb)
+        {
+            if (!context.TargetClass.IsClass || context.TargetClass.IsAbstract)
+                return false;  // return false to tell USG doesn't write file.
+
+            // code generation
+            sb.Append($@"
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace {context.TargetClass.Namespace}
+{{
+    internal partial class {context.TargetClass.Name}
+    {{
+        public void {METHOD_NAME}()
+        {{
+");
+            // Method Implementation
+            var INDENT = "            ";
+
+
+
+            // End of Method Implementation
+            sb.Append($@"
+        }}
+    }}
+}}
+");
+            return true;
+        }
+
+    }
+#ROOTNAMESPACEEND#
+
+#pragma warning restore IDE0051
+#endif

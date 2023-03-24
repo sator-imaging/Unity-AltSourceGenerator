@@ -13,19 +13,6 @@ namespace SatorImaging.UnitySourceGenerator
 {
     public class USGUtility
     {
-        [MenuItem("Assets/Unity Source Generator/Force Generate while Overwriting Disabled")]
-        static void ForceGenerateSelectedScripts()
-        {
-            USGEngine.IgnoreOverwriteSettingByAttribute = true;  // always disabled after import event.
-
-            foreach (var GUID in Selection.assetGUIDs)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(GUID);
-                AssetDatabase.ImportAsset(path);
-            }
-        }
-
-
         ///<summary>Force perform source code generation by class name.</summary>
         ///<param name="showInProjectPanel">works only when Unity is not building app.</param>
         public static void ForceGenerateByName(string clsName, bool showInProjectPanel = true)
