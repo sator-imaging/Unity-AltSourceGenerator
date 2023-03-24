@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEditor.Callbacks;
 
 
 namespace SatorImaging.UnitySourceGenerator
@@ -19,6 +20,8 @@ namespace SatorImaging.UnitySourceGenerator
         public static bool IgnoreOverwriteSettingByAttribute = false;
 
 
+        const string EDITOR_PREFS_LENGTH = "__STMG_USG__TARGET_LENGTH";
+        const string EDITOR_PREFS_PREFIX = "__STMG_USG__TARGET_";
         const int BUFFER_LENGTH = 61_440;
         const int BUFFER_MAX_CHAR_LENGTH = BUFFER_LENGTH / 3;  // worst case of UTF-8
         const string GENERATOR_PREFIX = ".";
@@ -64,24 +67,40 @@ namespace SatorImaging.UnitySourceGenerator
             //       menu command but OnPostprocessAllAssets event doesn't work as expected.
             //       (script runs with static field cleared even though .Clear() is only in ProcessingFiles().
             //        it's weird that event happens and asset paths retrieved but hashset items gone.)
-            ////EditorApplication.delayCall += () =>
+            // NOTE: Use EditorPrefs as a temporary storage.
+            var nPaths = 0;
+            for (int i = 0; i < importedAssets.Length; i++)
             {
-                ProcessingFiles(importedAssets);
+                if (!IsAppropriateTarget(importedAssets[i])) continue;
+                EditorPrefs.SetString(EDITOR_PREFS_PREFIX + nPaths++, importedAssets[i]);
+                Debug.Log($"[USG]: Saved into EditorPrefs: {importedAssets[i]}");
+            }
+            EditorPrefs.SetInt(EDITOR_PREFS_LENGTH, nPaths);
+
+            // NOTE: [DidReloadScripts] is executed before AssetPostprocessor, cannot be used.
+            EditorApplication.delayCall += () =>
+            {
+                ProcessingFiles();
             };
         }
 
 
         readonly static HashSet<string> s_updatedGeneratorNames = new();
-        static void ProcessingFiles(string[] targetPaths)
+        static void ProcessingFiles()
         {
             bool somethingUpdated = false;
-            for (int i = 0; i < targetPaths.Length; i++)
-            {
-                // NOTE: Do NOT early return in this method.
-                //       check path here to allow generator class can be lie outside of Assets/ folder.
-                if (!IsAppropriateTarget(targetPaths[i])) continue;
 
-                if (ProcessFile(targetPaths[i]))
+            var nPaths = EditorPrefs.GetInt(EDITOR_PREFS_LENGTH, 0);
+            EditorPrefs.DeleteKey(EDITOR_PREFS_LENGTH);
+            for (int i = 0; i < nPaths; i++)
+            {
+                var key = EDITOR_PREFS_PREFIX + i;
+                //if (!EditorPrefs.HasKey(key)) continue;
+
+                var path = EditorPrefs.GetString(key);
+                EditorPrefs.DeleteKey(key);
+
+                if (ProcessFile(path))
                     somethingUpdated = true;
             }
 
