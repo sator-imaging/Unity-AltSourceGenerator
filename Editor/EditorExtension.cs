@@ -65,8 +65,8 @@ namespace SatorImaging.UnitySourceGenerator
             focusAction += OnEditorApplicationFocus;
             focusChanged.SetValue(null, focusAction);
 
-            s_restoreAutoRefresh = EditorPrefs.GetInt(PREF_AUTO_REFRESH, EditorPrefs.GetInt(PREF_AUTO_REFRESH_OLD));
-            s_restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING);
+            s_restoreAutoRefresh = EditorPrefs.GetInt(PREF_AUTO_REFRESH, EditorPrefs.GetInt(PREF_AUTO_REFRESH_OLD, 1));
+            s_restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING, true);
         }
 
         const string PREF_AUTO_REFRESH = "kAutoRefreshMode";
@@ -79,11 +79,11 @@ namespace SatorImaging.UnitySourceGenerator
             //https://github.com/Unity-Technologies/UnityCsReference/blob/master/Editor/Mono/PreferencesWindow/AssetPipelinePreferences.cs#L94
             if (focus == false)
             {
-                s_restoreAutoRefresh = EditorPrefs.GetInt(PREF_AUTO_REFRESH, EditorPrefs.GetInt(PREF_AUTO_REFRESH_OLD));
-                s_restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING);
+                s_restoreAutoRefresh = EditorPrefs.GetInt(PREF_AUTO_REFRESH, EditorPrefs.GetInt(PREF_AUTO_REFRESH_OLD, 1));
+                s_restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING, true);
                 //AssetDatabase.DisallowAutoRefresh();
                 EditorApplication.LockReloadAssemblies();
-                EditorPrefs.GetBool(PREF_DIR_MONITORING, false);
+                EditorPrefs.SetBool(PREF_DIR_MONITORING, false);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH, 0);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH_OLD, 0);
             }
@@ -91,7 +91,7 @@ namespace SatorImaging.UnitySourceGenerator
             {
                 //AssetDatabase.AllowAutoRefresh();
                 EditorApplication.UnlockReloadAssemblies();
-                EditorPrefs.GetBool(PREF_DIR_MONITORING, s_restoreDirMonitoring);
+                EditorPrefs.SetBool(PREF_DIR_MONITORING, s_restoreDirMonitoring);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH, s_restoreAutoRefresh);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH_OLD, s_restoreAutoRefresh);
 

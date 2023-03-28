@@ -7,7 +7,7 @@ namespace SatorImaging.UnitySourceGenerator
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class UnitySourceGeneratorAttribute : Attribute
     {
-        Type generatorClass;
+        readonly Type generatorClass;
 
         public UnitySourceGeneratorAttribute(Type generatorClass = null)
         {
