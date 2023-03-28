@@ -1,5 +1,6 @@
 #pragma warning disable IDE0051
 
+using static SatorImaging.UnitySourceGenerator.USGFullNameOf;
 using SatorImaging.UnitySourceGenerator;
 using System.Text;
 using Debug = UnityEngine.Debug;
@@ -32,7 +33,7 @@ namespace {context.TargetClass.Namespace}
         {{
 ");
             // Method Implementation
-            var INDENT = "            ";
+            sb.IndentLevel(3);
 
 
 
