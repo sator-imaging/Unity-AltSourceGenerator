@@ -20,8 +20,9 @@ namespace SatorImaging.UnitySourceGenerator
         public static bool IgnoreOverwriteSettingByAttribute = false;
 
 
-        const string EDITOR_PREFS_LENGTH = "__STMG_USG__TARGET_LENGTH";
-        const string EDITOR_PREFS_PREFIX = "__STMG_USG__TARGET_";
+        const string EDITOR_PREFS_PREFIX = "__STMG_USG__";
+        const string EDITOR_PREFS_TARGET = EDITOR_PREFS_PREFIX + "TARGET_";
+        const string EDITOR_PREFS_LENGTH = EDITOR_PREFS_PREFIX + "TARGET_LENGTH";
         const int BUFFER_LENGTH = 61_440;
         const int BUFFER_MAX_CHAR_LENGTH = BUFFER_LENGTH / 3;  // worst case of UTF-8
         const string GENERATOR_PREFIX = ".";
@@ -67,13 +68,14 @@ namespace SatorImaging.UnitySourceGenerator
             //       menu command but OnPostprocessAllAssets event doesn't work as expected.
             //       (script runs with static field cleared even though .Clear() is only in ProcessingFiles().
             //        it's weird that event happens and asset paths retrieved but hashset items gone.)
+            //        --> https://docs.unity3d.com/2021.3/Documentation/Manual/DomainReloading.html
             // NOTE: Use EditorPrefs as a temporary storage.
             var nPaths = 0;
             for (int i = 0; i < importedAssets.Length; i++)
             {
                 if (!IsAppropriateTarget(importedAssets[i])) continue;
-                EditorPrefs.SetString(EDITOR_PREFS_PREFIX + nPaths++, importedAssets[i]);
-                Debug.Log($"[USG]: Saved into EditorPrefs: {importedAssets[i]}");
+                if (s_pathsToSkipNextImportEvent.Remove(importedAssets[i])) continue;
+                EditorPrefs.SetString(EDITOR_PREFS_TARGET + nPaths++, importedAssets[i]);
             }
             EditorPrefs.SetInt(EDITOR_PREFS_LENGTH, nPaths);
 
@@ -85,7 +87,10 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
+        readonly static HashSet<string> s_pathsToSkipNextImportEvent = new();
+
         readonly static HashSet<string> s_updatedGeneratorNames = new();
+        readonly static HashSet<string> s_processedFiles = new();
         static void ProcessingFiles()
         {
             bool somethingUpdated = false;
@@ -94,7 +99,7 @@ namespace SatorImaging.UnitySourceGenerator
             EditorPrefs.DeleteKey(EDITOR_PREFS_LENGTH);
             for (int i = 0; i < nPaths; i++)
             {
-                var key = EDITOR_PREFS_PREFIX + i;
+                var key = EDITOR_PREFS_TARGET + i;
                 //if (!EditorPrefs.HasKey(key)) continue;
 
                 var path = EditorPrefs.GetString(key);
@@ -102,6 +107,8 @@ namespace SatorImaging.UnitySourceGenerator
 
                 if (ProcessFile(path))
                     somethingUpdated = true;
+
+                s_processedFiles.Add(path);
             }
 
             // TODO: more efficient way to process related targets
@@ -115,7 +122,7 @@ namespace SatorImaging.UnitySourceGenerator
                         continue;
 
                     var path = USGUtility.GetAssetPathByName(info.TargetClass.Name);
-                    if (path != null && IsAppropriateTarget(path))
+                    if (path != null && s_processedFiles.Add(path) && IsAppropriateTarget(path))
                     {
                         IgnoreOverwriteSettingByAttribute = overwriteEnabledByCaller
                             || info.Attribute.OverwriteIfFileExists;
@@ -129,6 +136,7 @@ namespace SatorImaging.UnitySourceGenerator
                 AssetDatabase.Refresh();
 
             s_updatedGeneratorNames.Clear();
+            s_processedFiles.Clear();
 
             IgnoreOverwriteSettingByAttribute = false;  // always turn it off.
         }
@@ -146,10 +154,16 @@ namespace SatorImaging.UnitySourceGenerator
 
             if (!s_typeNameToInfo.ContainsKey(clsName))
             {
-                if (!clsName.EndsWith(GENERATOR_EXT))
+                // NOTE: When generated code has error, removing error code and save will invoke
+                //       import event and error code will be re-generated again.
+                //       (delaying code generation won't solve this behaviour...? disable anyway)
+                if (!IgnoreOverwriteSettingByAttribute)
                     return false;
 
                 // try find generator
+                if (!clsName.EndsWith(GENERATOR_EXT))
+                    return false;
+
                 clsName = Path.GetFileNameWithoutExtension(clsName);
                 clsName = Path.GetExtension(clsName);
 
@@ -164,9 +178,10 @@ namespace SatorImaging.UnitySourceGenerator
             var info = s_typeNameToInfo[clsName];
             if (info == null) return false;
 
-            // TODO: more streamlined.
             if (info.TargetClass == null)
             {
+                // NOTE: this list contains referenced only generator names that used to perform
+                //       code generation on referencing classes.
                 s_updatedGeneratorNames.Add(clsName);
                 return false;
             }
@@ -215,12 +230,17 @@ namespace SatorImaging.UnitySourceGenerator
                 return false;
 
             // NOTE: overwrite check must be done after Emit() due to allowing output path modification.
-            // TODO: code generation happens but file is not written. any way to skip code generation?
-            if (File.Exists(context.OutputPath) &&
-                (!info.Attribute.OverwriteIfFileExists && !IgnoreOverwriteSettingByAttribute)
-                )
+            // TODO: code generation happens but file is not written when overwrite is disabled.
+            //       any way to skip code generation?
+            if (File.Exists(context.OutputPath))
             {
-                return false;
+                if (!info.Attribute.OverwriteIfFileExists && !IgnoreOverwriteSettingByAttribute)
+                    return false;
+            }
+            else
+            {
+                // used to prevent import event happens on newly generated file.
+                s_pathsToSkipNextImportEvent.Add(context.OutputPath);
             }
 
 
@@ -303,6 +323,7 @@ namespace SatorImaging.UnitySourceGenerator
             */
 
 
+            // OPTIMIZE: ReflectionOnlyGetType() can be used??
             var infos = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(static x =>
                 {
