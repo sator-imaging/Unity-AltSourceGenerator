@@ -8,17 +8,17 @@ using UnityEditor;
 #endif
 
 #ROOTNAMESPACEBEGIN#
-    // HOW TO USE: Add the following attribute to *target* class.
-    //             Note that target class must be defined as partial.
-    //[UnitySourceGenerator(typeof(#SCRIPTNAME#), OverwriteIfFileExists = false)]
-    public partial class #SCRIPTNAME#
+    // HOW TO USE: Place this file in Assets/ folder to enable source generator.
+    //             USG is processing files only in Assets/ folder.
+    [UnitySourceGenerator(OverwriteIfFileExists = false)]
+    partial class #SCRIPTNAME#
     {
 #if UNITY_EDITOR   // USG: Generator methods should not be included in build
 #pragma warning disable IDE0051
 
         readonly static string MEMBER_ACCESS = "internal";
         readonly static string MAIN_MEMBER_NAME = __________________________;
-        static string OutputFileName() => MAIN_MEMBER_NAME + ".cs";  // -> Name.<TargetClass>.<GeneratorClass>.g.cs
+        static string OutputFileName() => MAIN_MEMBER_NAME + ".cs";  // -> Name.<ClassName>.g.cs
 
         static bool Emit(USGContext context, StringBuilder sb)
         {

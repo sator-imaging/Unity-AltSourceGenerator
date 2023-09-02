@@ -1,9 +1,6 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
-using UnityEngine;
 
 
 namespace SatorImaging.UnitySourceGenerator
@@ -15,7 +12,7 @@ namespace SatorImaging.UnitySourceGenerator
         public static int CurrentIndentLevel = 0;
 
 
-        private static int s_lastIndentLevel = int.MinValue;  // init with different value to current to build string
+        private static int s_lastIndentLevel = int.MinValue;  // must be different from CurrentLevel to initialize indentString
 
         private static string s_indentString = string.Empty;
         public static string IndentString
@@ -36,11 +33,27 @@ namespace SatorImaging.UnitySourceGenerator
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void IndentChar(this StringBuilder sb, char value) => CurrentIndentChar = value;
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void IndentSize(this StringBuilder sb, int size) => CurrentIndentSize = Math.Max(0, size);
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void IndentLevel(this StringBuilder sb, int level) => CurrentIndentLevel = Math.Max(0, level);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void IndentBegin(this StringBuilder sb) => CurrentIndentLevel = Math.Max(0, CurrentIndentLevel + 1);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void IndentEnd(this StringBuilder sb) => CurrentIndentLevel = Math.Max(0, CurrentIndentLevel - 1);
+
+
+        ///<summary>Shorthand for IndentLine(); IndentLevel++;</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void IndentBegin(this StringBuilder sb, string value = null)
+        {
+            sb.IndentLine(value);
+            CurrentIndentLevel = Math.Max(0, CurrentIndentLevel + 1);
+        }
+
+        ///<summary>Shorthand for IndentLevel--; IndentLine();</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void IndentEnd(this StringBuilder sb, string value = null)
+        {
+            CurrentIndentLevel = Math.Max(0, CurrentIndentLevel - 1);
+            sb.IndentLine(value);
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void IndentLine(this StringBuilder sb, string value)
+        public static void IndentLine(this StringBuilder sb, string value = null)
         {
             sb.IndentAppend(value);
             sb.AppendLine();

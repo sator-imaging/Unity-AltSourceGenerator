@@ -3,7 +3,12 @@ using System.Text;
 
 namespace SatorImaging.UnitySourceGenerator
 {
-    ///<summary>NOTE: Implement "IUnitySourceGenerator" (C# 11.0)</summary>
+    ///<summary>
+    /// Implement the following methods on generator class.<br/>
+    /// - static string OutputFileName()<br/>
+    /// - static bool Emit(USGContext, StringBuilder)
+    ///</summary>
+    // TODO: Implement "IUnitySourceGenerator" (C# 11.0)
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class UnitySourceGeneratorAttribute : Attribute
     {

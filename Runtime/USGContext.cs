@@ -1,9 +1,9 @@
 using System;
-using UnityEngine;
 
 
 namespace SatorImaging.UnitySourceGenerator
 {
+    // OPTIMIZE: Be ref struct
     public class USGContext
     {
         public Type TargetClass;

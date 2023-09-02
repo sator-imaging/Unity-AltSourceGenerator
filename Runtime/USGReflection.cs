@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using UnityEngine;
-using UnityEngine.UI;
-using Debug = UnityEngine.Debug;
 
 
 namespace SatorImaging.UnitySourceGenerator
@@ -98,7 +95,7 @@ namespace SatorImaging.UnitySourceGenerator
 
             return (enumType.GetEnumNames(), enumType.GetEnumValues().Cast<TValue>().ToArray());
         }
-#endif //UNITY_2021_3_OR_NEWER
+#endif
 
 
     }
