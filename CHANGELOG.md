@@ -13,16 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes ;-)
 
-- *USGEngine*.`ProcessFile(string assetsRelPath)`  
-   👉 signature changed: `ProcessFile(string assetsRelPath,
-    bool ignoreOverwriteSettingOnAttribute, bool autoRunReferencingEmittersNow = false)`
+#### USGEngine.ProcessFile(string assetsRelPath)
 
-- ~~public~~ static bool *USGEngine*.`IgnoreOverwriteSettingByAttribute`  
-   👉 now private. use <code>ProcessFile(path, **true**)</code> instead.
+signature changed:
+- `ProcessFile(string assetsRelPath, bool ignoreOverwriteSettingOnAttribute, bool autoRunReferencingEmittersNow = false)`
 
-- *USGUtility*.<code>ForceGenerateByName(string clsName, bool showInProjectPanel = **false**)</code>  
-   👉 now false by default.
+#### ~~public~~ static bool USGEngine.IgnoreOverwriteSettingByAttribute
 
-- `usg(Type cls, params string[] memberNames)`  
-   👉 signature changed: `usg(object obj, bool isFullName = true)`  
-   👉 `global::` namespace will be added.
+now private. use `ProcessFile(path, *true*)` instead.
+
+#### USGUtility.ForceGenerateByName(string clsName, bool showInProjectPanel = *false*)
+
+`showInProjectPanel` now false by default.
+
+#### usg<T>(params string[] memberNames)
+
+`global::` namespace will be added.
+
+#### usg(Type cls, params string[] memberNames)
+
+signature changed:
+- `usg(object valueOrType, bool isFullName = true)`

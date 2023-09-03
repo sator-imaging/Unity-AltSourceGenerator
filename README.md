@@ -244,8 +244,6 @@ There are utility methods for coding source generator more efficient and readabl
 
 
 ```csharp
-using static SatorImaging.UnitySourceGenerator.USGFullNameOf;  // usg<T>() to work
-
 // indent utility
 sb.IndentChar(' ');  // default
 sb.IndentSize(4);    // default
@@ -259,20 +257,24 @@ sb.IndentBegin("void MethodName() {");
     sb.IndentLine($"MyObject.EnumValue = {CAST_MY_ENUM}intValue");
 }
 sb.IndentEnd("}");
+```
 
-// writing with auto completion
+```csharp
+using static SatorImaging.UnitySourceGenerator.USGFullNameOf;  // usg<T>() to work
+
+// usg<T>() allows to write refactoring-ready code with auto completion
 sb.Append($"public static {usg<Dictionary<int, float>>()} MyDict = new() {{ init... }};");
 
-// usg<T>{params string[]) to get full type name
-usg<MyClass>("NestedStruct.MyField"); // -> global::Full.Namespace.To.MyClass.MyStruct.MyField
+// usg<T>{params string[]) to generate full name with specified member name.
+usg<MyClass>("NestedStruct.MyField");  // -> global::Full.Namespace.To.MyClass.MyStruct.MyField
 // most strict refactoring-ready code
 usg<MyClass>(nameof(MyClass.NestedStruct), nameof(MyClass.NestedStruct.MyField));
 
-// usg(object) to retrieve full type definition literal
-static class ExistingClass {
+// usg(object valueOrType, bool isFullName) to retrieve full type definition literal
+static class MyClass {
     Dictionary<int, List<Dictionary<string, float[][]>[]>> Complex = new(0);  // usg() throws when null
 }
-sb.Append($"ExistingClass.Complex = new {usg(ExistingClass.Complex)}() {{ generated code... }};");
+usg(MyClass.Complex);  // -> global::...Dictionary<int, global::...List<global::...Dictionary<string, float[][]>[]>>
 ```
 
 
@@ -294,7 +296,7 @@ There are utility functions to perform source code generation on build event.
 USGUtility.ForceGenerateByName(nameof(MinimalGenerator));
 
 // perform code generation by known path.
-USGEngine.ProcessFile(assetPath, true);  // force overwrite
+USGEngine.ProcessFile(assetPath, true, true);  // force overwrite all related generators
 ```
 
 
@@ -366,16 +368,9 @@ Use the following git URL in Unity Package Manager (UPM).
 
 ## USG Control Panel & Window
 
-- `Edit > Project Settings > Alternative Source Generator`
+- `Main Menu > Edit > Project Settings > Alternative Source Generator`
 
-![](https://dl.dropbox.com/scl/fi/jijclnarrruxdt590vss1/USG_Panel.png?rlkey=k44lc9swk0mmui849ck7tappk&dl=0)
-
-
-- `Tools > Alternative Source Generator`
-
-![](https://dl.dropbox.com/scl/fi/dedb30699adhss8zqwft5/USG_Window.png?rlkey=13gq24ypciw00o9tkhicdpxpe&dl=0)
-
-
+    ![](https://dl.dropbox.com/scl/fi/jijclnarrruxdt590vss1/USG_Panel.png?rlkey=k44lc9swk0mmui849ck7tappk&dl=0)
 
 
 - **On**
@@ -390,6 +385,12 @@ Use the following git URL in Unity Package Manager (UPM).
     - Linked chain icon (🔗) to unveil emitted file in `USG.g` folder.
 - 🗑️
     - Delete *emitted* file from `USG.g` folder.
+
+- `Main Menu > Tools > Alternative Source Generator`
+    - open as a window.
+
+    ![](https://dl.dropbox.com/scl/fi/dedb30699adhss8zqwft5/USG_Window.png?rlkey=13gq24ypciw00o9tkhicdpxpe&dl=0)
+
 
 
 ## Context Menu
