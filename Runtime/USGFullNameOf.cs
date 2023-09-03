@@ -23,17 +23,17 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
         ///<summary>Get type definition literal of supplied object.</summary>
-        ///<remarks>Throw when object is null.</remarks>
+        ///<param name="valueOrType">Throw when valueOrType is null.</param>
         ///<returns>Ex: Dictionary&lt;int, List&lt;Dictionary&lt;string, float[][]&gt;[]&gt;&gt;[]</returns>
-        public static string usg(object obj, bool isFullName = true)
+        public static string usg(object valueOrType, bool isFullName = true)
         {
-            if (obj == null)
+            if (valueOrType == null)
                 throw new ArgumentNullException();
 
-            if (obj is Type t)
+            if (valueOrType is Type t)
                 return GetTypeDef(t, isFullName);
 
-            return GetTypeDef(obj.GetType(), isFullName);
+            return GetTypeDef(valueOrType.GetType(), isFullName);
         }
 
 
