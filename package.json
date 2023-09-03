@@ -19,6 +19,7 @@
     "Postprocessor"
   ],
   "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
   },
   "repository": {
     "type": "git",
