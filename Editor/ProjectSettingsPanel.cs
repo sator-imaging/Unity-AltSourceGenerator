@@ -91,10 +91,11 @@ namespace SatorImaging.UnitySourceGenerator
         static string[] _emitterPaths = Array.Empty<string>();
         static string _generatorPathToShowEmitters = null;
         static Dictionary<string, string> _generatorNameToOutputFileName = new();
-        static GUIContent gui_emitterBtn;
+        // GUI classes cannot be initialized on field definition.
+        static GUIContent gui_emittersBtn;
         static GUIContent gui_deleteBtn;
-        static GUIContent gui_generateBtn;
-        static GUIContent gui_goGeneratedBtn;
+        static GUIContent gui_runBtn;
+        static GUIContent gui_unveilBtn;
         static GUILayoutOption gui_toggleWidth;
         static GUILayoutOption gui_buttonWidth;
         static GUIStyle gui_noBGButtonStyle;
@@ -104,11 +105,10 @@ namespace SatorImaging.UnitySourceGenerator
         //       to take reference to newly created object, need `ref` chain.
         static void Wakeup(ref Editor cachedEditor)
         {
-            // GUI classes cannot be initialized on field definition.
-            gui_emitterBtn ??= new(EditorGUIUtility.IconContent("d_icon dropdown"));
+            gui_emittersBtn ??= new(EditorGUIUtility.IconContent("d_icon dropdown"));
             gui_deleteBtn ??= new(EditorGUIUtility.IconContent("d_TreeEditor.Trash"));
-            gui_generateBtn ??= new(EditorGUIUtility.IconContent("PlayButton On"));//d_playLoopOff
-            gui_goGeneratedBtn ??= new(EditorGUIUtility.IconContent("d_Linked"));//SavePassive/SaveActive/SaveFromPlay/d_pick/
+            gui_runBtn ??= new(EditorGUIUtility.IconContent("PlayButton On"));//d_playLoopOff
+            gui_unveilBtn ??= new(EditorGUIUtility.IconContent("d_Linked"));//SavePassive/SaveActive/SaveFromPlay/d_pick/
             gui_toggleWidth ??= GUILayout.Width(16);
             gui_buttonWidth ??= GUILayout.Width(32);
             if (gui_noBGButtonStyle == null)
@@ -227,7 +227,7 @@ namespace SatorImaging.UnitySourceGenerator
                 }
 
                 //run
-                if (GUILayout.Button(gui_generateBtn, gui_buttonWidth))
+                if (GUILayout.Button(gui_runBtn, gui_buttonWidth))
                 {
                     Debug.Log($"[{nameof(UnitySourceGenerator)}] Generator running: {fileName}");
                     USGUtility.ForceGenerateByName(fileName, false);
@@ -238,18 +238,19 @@ namespace SatorImaging.UnitySourceGenerator
                 {
                     EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(filePath));
                 }
-                //emitter??
+
+                //emitters??
                 if (showEmitterBtn)
                 {
-                    if (GUILayout.Button(gui_emitterBtn, gui_noBGButtonStyle))
+                    if (GUILayout.Button(gui_emittersBtn, gui_noBGButtonStyle))
                     {
                         _emitterPaths = GetEmitters(filePath);
                     }
                 }
-                //goGenerated??
+                //unveil??
                 else
                 {
-                    if (GUILayout.Button(gui_goGeneratedBtn, gui_noBGButtonStyle))
+                    if (GUILayout.Button(gui_unveilBtn, gui_noBGButtonStyle))
                     {
                         EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(
                             USGEngine.GetGeneratorOutputPath(filePath, _generatorNameToOutputFileName[fileName])));

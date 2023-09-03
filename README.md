@@ -296,7 +296,7 @@ There are utility functions to perform source code generation on build event.
 USGUtility.ForceGenerateByName(nameof(MinimalGenerator));
 
 // perform code generation by known path.
-USGEngine.ProcessFile(assetPath, true, true);  // force overwrite all related generators
+USGEngine.ProcessFile(assetPath, true, true);  // force re-generate all related files
 ```
 
 
