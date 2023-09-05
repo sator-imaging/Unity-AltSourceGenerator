@@ -332,18 +332,26 @@ namespace SatorImaging.UnitySourceGenerator
             using (var fs = new FileStream(context.OutputPath, FileMode.Create, FileAccess.Write))
             {
                 //Span<byte> buffer = stackalloc byte[BUFFER_LENGTH];
-                Span<byte> buffer = ArrayPool<byte>.Shared.Rent(BUFFER_LENGTH).AsSpan(0, BUFFER_LENGTH);
-                var span = sb.ToString().AsSpan();
-                int len, written;
-                for (int start = 0; start < span.Length; start += BUFFER_MAX_CHAR_LENGTH)
+                var rentBufferToReturn = ArrayPool<byte>.Shared.Rent(BUFFER_LENGTH);
+                try
                 {
-                    len = BUFFER_MAX_CHAR_LENGTH;
-                    if (len + start > span.Length) len = span.Length - start;
+                    var buffer = rentBufferToReturn.AsSpan(0, BUFFER_LENGTH);
+                    var span = sb.ToString().AsSpan();
+                    int len, written;
+                    for (int start = 0; start < span.Length; start += BUFFER_MAX_CHAR_LENGTH)
+                    {
+                        len = BUFFER_MAX_CHAR_LENGTH;
+                        if (len + start > span.Length) len = span.Length - start;
 
-                    written = info.Attribute.OutputFileEncoding.GetBytes(span.Slice(start, len), buffer);
-                    fs.Write(buffer.Slice(0, written));
+                        written = info.Attribute.OutputFileEncoding.GetBytes(span.Slice(start, len), buffer);
+                        fs.Write(buffer.Slice(0, written));
+                    }
+                    fs.Flush();
                 }
-                fs.Flush();
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(rentBufferToReturn);
+                }
             }
 
 #else
