@@ -363,7 +363,7 @@ Unity Editor Integration
 Use the following git URL in Unity Package Manager (UPM).
 
 - Latest: https://github.com/sator-imaging/Unity-AltSourceGenerator.git
-- v2.0.0: https://github.com/sator-imaging/Unity-AltSourceGenerator.git#v2.0.0
+- v2.0.1: https://github.com/sator-imaging/Unity-AltSourceGenerator.git#v2.0.1
 
 
 ## USG Control Panel & Window
@@ -373,18 +373,18 @@ Use the following git URL in Unity Package Manager (UPM).
     ![](https://dl.dropbox.com/scl/fi/jijclnarrruxdt590vss1/USG_Panel.png?rlkey=k44lc9swk0mmui849ck7tappk&dl=0)
 
 
-- **On**
-    - Include generator in auto run sequence.
+    - **On**
+        - Include generator in auto run sequence.
 
-- **Run**
-    - Run generator on demand. Note that `OverwriteIfFileExists` setting on attribute is ignored.
+    - **Run**
+        - Run generator on demand. Note that `OverwriteIfFileExists` setting on attribute is ignored.
 
-- **Link**
-    - Click name to unveil generator script file in project window.
-    - Down arrow icon (▼) will show referencing emitters below.
-    - Linked chain icon (🔗) to unveil emitted file in `USG.g` folder.
-- 🗑️
-    - Delete *emitted* file from `USG.g` folder.
+    - **Link**
+        - Click name to unveil generator script file in project window.
+        - Down arrow icon (▼) will show referencing emitters below.
+        - Linked chain icon (🔗) to unveil emitted file in `USG.g` folder.
+    - 🗑️
+        - Delete *emitted* file from `USG.g` folder.
 
 - `Main Menu > Tools > Alternative Source Generator`
     - open as a window.

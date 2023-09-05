@@ -1,7 +1,7 @@
 {
   "name": "com.sator-imaging.alt-source-generator",
   "displayName": "Alternative Source Generator for Unity",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "unity": "2021.3",
   "description": "Ease-of-Use Source Generator Alternative for Unity.",
   "author": {
