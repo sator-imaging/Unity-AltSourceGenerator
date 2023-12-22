@@ -6,7 +6,7 @@ namespace SatorImaging.UnitySourceGenerator
     {
         ///<summary>Refactor-ready full name generator.</summary>
         ///<remarks>Ex: usg&lt;MyClass.InnerClass&gt;(nameof(Something), "Generated")</remarks>
-        ///<returns>Full.Namespace.To.MyClass.InnerClass.Something.Generated</returns>
+        ///<returns>global::Full.Namespace.To.MyClass.InnerClass.Something.Generated</returns>
         public static string usg<T>(params string[] memberNames)
         {
             var ret = GetTypeDef(typeof(T), true);
@@ -15,7 +15,7 @@ namespace SatorImaging.UnitySourceGenerator
 
             for (int i = 0; i < memberNames.Length; i++)
             {
-                if (memberNames[i]?.Length is null or 0)
+                if (memberNames[i] == null || memberNames[i].Length == 0)
                     continue;
                 ret += '.' + memberNames[i];
             }
@@ -63,7 +63,8 @@ namespace SatorImaging.UnitySourceGenerator
                 t = t.GetElementType();
             }
 
-            if (!TryGetBuiltinDef(ref ret) && isFullName && ns.Length > 0)
+            bool isBuiltinType = TryGetBuiltinDef(ref ret);
+            if (!isBuiltinType && isFullName && ns.Length > 0)
                 ret = ns + ret;
 
             if (t.IsGenericType)
@@ -85,7 +86,7 @@ namespace SatorImaging.UnitySourceGenerator
                 arrayDim--;
             }
 
-            if (isFullName)
+            if (!isBuiltinType && isFullName)
                 ret = "global::" + ret;
 
             return ret;
