@@ -19,24 +19,24 @@ As you already know, Roslyn's source generator is too sophisticated. This framew
 <!------- End of Details JA Tag -------></details></p>
 
 
-![](https://dl.dropbox.com/scl/fi/jijclnarrruxdt590vss1/USG_Panel.png?rlkey=k44lc9swk0mmui849ck7tappk&dl=0)
+- [🎉 USG Control Centre <sup><sub><sup>*New*</sup></sub></sup>](#usg-control-panel--window)
+  ![](https://dl.dropbox.com/scl/fi/jijclnarrruxdt590vss1/USG_Panel.png?rlkey=k44lc9swk0mmui849ck7tappk&dl=0)
+- [🛠 Breaking Changes](CHANGELOG.md)
+- [✅ TODO](#todo)
 
 
-- [USG Control Centre <sup><sup><sub>*New*</sub></sup></sup>](#usg-control-panel--window)
-- [Breaking Changes in v2.0](CHANGELOG.md)
-- [TODO](#todo)
+<p><details lang="en" open><summary>📃 Table of Contents</summary>
 
-
-<p><details lang="en" open><summary>Table of Contents</summary>
-
-- [Sample Code](#sample-code)
+- [How to Use](#how-to-use)
     - [Method Generator](#method-generator)
-        - [How to Use](#how-to-use)
+        - [How to Generate Source Code](#how-to-generate-source-code)
         - [Result](#result)
     - [Self-Emit Generator](#self-emit-generator)
         - [Result](#result-1)
 - [Output Directory and File Name](#output-directory-and-file-name)
 - [Coding Goodies](#coding-goodies)
+- [Samples](#samples)
+    - [SceneBuildIndexGenerator](#scenebuildindexgenerator)
 - [Utility Functions for Build Event](#utility-functions-for-build-event)
 - [Technical Notes](#technical-notes)
     - [Naming Convention](#naming-convention)
@@ -57,8 +57,8 @@ As you already know, Roslyn's source generator is too sophisticated. This framew
 
 
 
-Sample Code
-===========
+How to Use
+==========
 
 Here is minimal implementation of source generator.
 
@@ -107,7 +107,7 @@ namespace {context.TargetClass.Namespace}
 
 
 
-### How to Use
+### How to Generate Source Code
 
 
 ```csharp
@@ -221,26 +221,11 @@ There are utility methods for coding source generator more efficient and readabl
     - `IndentLevel` / `IndentChar` / `IndentSize`
 - `USGFullNameOf`
     - `usg`
-- `USGReflection`
+- `USGReflection` <sub><sup>* can be used on Unity runtime</sup></sub>
     - `GetAllPublicInstanceFieldAndProperty`
     - `TryGetFieldOrPropertyType`
     - `GetEnumNamesAndValuesAsDictionary`
     - `GetEnumNamesAndValuesAsTuple`
-
-`usg` is a special utility that is designed for refactoring-ready source generator more readable, script template import it as a static library by default.
-
-
-<p><details lang="ja" --open><summary><small>日本語 / JA</small></summary>
-
-`System.Reflection` 系のユーティリティーと `StringBuilder` の拡張メソッド群。
-
-`usg` は特殊で、クラス名やら何やらのリファクタリングに強いジェネレーターにすると読みづらくなってしまうのを緩和するためのモノ。
-
-`{typeof(MyClass).FullName}.{nameof(MyClass.Property)}` どんどん長くなるだけなら良いけどクラス内クラスとか構造体の名前が + 付きの不正な状態で出てくる。その他にもジェネリッククラスへの対応とかなんとか、結局何かが必要になる。それならばと可能な限り短く書けるようにした。
-
-インデント系はトリッキーだけど開発機での実行なのでまあ良し。
-
-<!------- End of Details JA Tag -------></details></p>
 
 
 ```csharp
@@ -258,6 +243,23 @@ sb.IndentBegin("void MethodName() {");
 }
 sb.IndentEnd("}");
 ```
+
+
+`usg` is a special utility that is designed for refactoring-ready source generator more readable, script template import it as a static library by default.
+
+
+<p><details lang="ja" --open><summary><small>日本語 / JA</small></summary>
+
+`System.Reflection` 系のユーティリティーと `StringBuilder` の拡張メソッド群。
+
+`usg` は特殊で、クラス名やら何やらのリファクタリングに強いジェネレーターにすると読みづらくなってしまうのを緩和するためのモノ。
+
+`{typeof(MyClass).FullName}.{nameof(MyClass.Property)}` どんどん長くなるだけなら良いけどクラス内クラスとか構造体の名前が + 付きの不正な状態で出てくる。その他にもジェネリッククラスへの対応とかなんとか、結局何かが必要になる。それならばと可能な限り短く書けるようにした。
+
+インデント系はトリッキーだけど開発機での実行なのでまあ良し。
+
+<!------- End of Details JA Tag -------></details></p>
+
 
 ```csharp
 using static SatorImaging.UnitySourceGenerator.USGFullNameOf;  // usg<T>() to work
@@ -279,6 +281,40 @@ usg(MyClass.Complex);  // -> global::...Dictionary<int, global::...List<global::
 
 
 
+Samples
+=======
+
+SceneBuildIndexGenerator
+------------------------
+
+This sample allows you to handle scene index more efficiently.
+
+To use this sample, add `[UnitySourceGenerator(typeof(SceneBuildIndexGenerator))]` attribute to your class. after that, you can use the following enum and helper methods.
+
+
+- enum `SceneBuildIndex`
+
+    - enum consists of scene file names which registered in build settings.
+    - easy to use with Unity inspector. note that class field doesn't track build index changes.
+
+- static class `SceneBuildIndexResolver`
+
+    - `GetByName(string sceneFileNameWithoutExtension)`
+        - get build index by scene name or throws if scene is not found.
+        - this method ensures the scene must be included in build and also track build index changes.
+        ```csharp
+        // use like this in entry point to validate scene existence
+        SceneBuildIndex ImportantSceneIndex = SceneBuildIndexResolver.GetByName("Scene_Must_Be_Included_in_Build");
+        ```
+
+    - `GetListByPrefix(string fileNamePrefix)`
+        - Get list of index which starts with prefix.
+
+    - `GetListByPath(string assetsPath)`
+        - Path must be started with **"Assets/"**.
+
+
+
 Utility Functions for Build Event
 =================================
 
@@ -292,11 +328,11 @@ There are utility functions to perform source code generation on build event.
 
 
 ```csharp
-// perform code generation by class name if you don't know where it is.
-USGUtility.ForceGenerateByName(nameof(MinimalGenerator));
+// generate code for specified generator type
+USGUtility.ForceGenerateByType(typeof(MinimalGenerator));
 
-// perform code generation by known path.
-USGEngine.ProcessFile(assetPath, true, true);  // force re-generate all related files
+// or for the emitter type
+USGUtility.ForceGenerateByType(typeof(ClassHasUSGAttribute));
 ```
 
 
@@ -321,22 +357,22 @@ As of C# 9.0, it doesn't allow to define `abstract static` methods in interface,
 
 ## Naming Convention
 
-- Generator class name and filename must be matched.
-- Class name must be unique in whole project.
-- Classes are ignored if defined in assembly which name starts with:
-    - `Unity` (no trailing dot)
-    - `System.`
-    - `Mono.`
+- Generator/target class name and filename must be matched.
+- ~~Class name must be unique in whole project.~~
+- ~~Classes are ignored if defined in assembly which name starts with:~~
+    - ~~`Unity` (no trailing dot)~~
+    - ~~`System.`~~
+    - ~~`Mono.`~~
 
 
 <p><details lang="ja" --open><summary><small>日本語 / JA</small></summary>
 
-- ジェネレータークラスの名前はファイル名と一致
-- ジェネレータクラスの名前はプロジェクト内で一意
-- クラスが以下で始まる名前のアセンブリで宣言されている場合は対象としない
-    - `Unity` (末尾ドット無し)
-    - `System.`
-    - `Mono.`
+- ジェネレーター・対象クラスの名前はファイル名と一致
+- ~~ジェネレータクラスの名前はプロジェクト内で一意~~
+- ~~クラスが以下で始まる名前のアセンブリで宣言されている場合は対象としない~~
+    - ~~`Unity` (末尾ドット無し)~~
+    - ~~`System.`~~
+    - ~~`Mono.`~~
 
 <!------- End of Details JA Tag -------></details></p>
 
@@ -363,6 +399,7 @@ Unity Editor Integration
 Use the following git URL in Unity Package Manager (UPM).
 
 - Latest: https://github.com/sator-imaging/Unity-AltSourceGenerator.git
+- v3.0.0: https://github.com/sator-imaging/Unity-AltSourceGenerator.git#v3.0.0
 - v2.0.1: https://github.com/sator-imaging/Unity-AltSourceGenerator.git#v2.0.1
 
 
@@ -486,8 +523,15 @@ SOFTWARE.
 
 # Devnote
 
-
 ## TODO
+
+- `GenerateOnce` attribute parameter
+    - currently USG generates same class/enum multiple times when multiple classes refer enum/singleton generator.
+    - ex. `SceneBuildIndex` must be referred only once in project to avoid conflict
+- v4: remove obsolete functions
+- support C# 11 language features (waiting for Unity 6 update!!)
+- see also: [CHANGELOG](CHANGELOG.md#unreleased)
+
 
 <!-- useless
 - Add new attribute option `UseCustomWriter` to use it's own file writer instead of builtin writer. For the "non-allocation" addicted developers.
@@ -497,6 +541,7 @@ SOFTWARE.
 -->
 
 
+<!--
 Clarify terminology of generator types, especially in source code comments.
 currently, referenced/referencing generator, or just generator, confusing!
 
@@ -504,9 +549,10 @@ currently, referenced/referencing generator, or just generator, confusing!
     - Class has `Emit()` method to generate code. And does NOT have `UnitySourceGenerator` attribute.
     - current -> "referenced" generator, "referenced only" generator, etc.
 
-- Emitter class: (or Target, Source, Client, Igniter, Invoker, Caller?)
+- Target, or Emitter class:
     - Class has `UnitySourceGenerator` attribute to invoke code generation. And does NOT have `Emit()` method.
     - current -> "referencing" class, just generator, etc.
 
-- Self-Emit class:
+- Self-Emit Generator (Self-Generator) class:
     - Class has both `Emit()` method and `UnitySourceGenerator` attribute. Works only a file. No dependencies.
+-->
