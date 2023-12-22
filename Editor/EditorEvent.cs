@@ -24,7 +24,8 @@ namespace SatorImaging.UnitySourceGenerator
             //https://github.com/Unity-Technologies/UnityCsReference/blob/master/Editor/Mono/EditorApplication.cs#L275
             var focusChanged = typeof(EditorApplication).GetField("focusChanged",
                 BindingFlags.Static | BindingFlags.NonPublic);
-            if (focusChanged == null) return;
+            if (focusChanged == null)
+                return;
 
             // TODO: better cleanup.
             //       currently, event can be unregistered but it seems empty action runs on focus changed event...?
@@ -50,15 +51,15 @@ namespace SatorImaging.UnitySourceGenerator
             //Debug.Log($"[USG] Null? {currentAction == null}  Method:{currentAction.Method} Target:{currentAction.Target}");
 
             _restoreAutoRefresh = EditorPrefs.GetInt(PREF_AUTO_REFRESH, EditorPrefs.GetInt(PREF_AUTO_REFRESH_OLD, DEFAULT_AUTO_REFRESH));
-            _restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING, DEFAULT_DIR_MONITORING);
+            //_restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING, DEFAULT_DIR_MONITORING);
         }
 
         const bool DEFAULT_DIR_MONITORING = true;
         const int DEFAULT_AUTO_REFRESH = 1;
         const string PREF_AUTO_REFRESH = "kAutoRefreshMode";
         const string PREF_AUTO_REFRESH_OLD = "kAutoRefresh";
-        const string PREF_DIR_MONITORING = "DirectoryMonitoring";
-        static bool _restoreDirMonitoring = DEFAULT_DIR_MONITORING;
+        //const string PREF_DIR_MONITORING = "DirectoryMonitoring";
+        //static bool _restoreDirMonitoring = DEFAULT_DIR_MONITORING;
         static int _restoreAutoRefresh = DEFAULT_AUTO_REFRESH;
         static void OnEditorApplicationFocus(bool focus)
         {
@@ -66,16 +67,17 @@ namespace SatorImaging.UnitySourceGenerator
             if (focus == false)
             {
                 _restoreAutoRefresh = EditorPrefs.GetInt(PREF_AUTO_REFRESH, EditorPrefs.GetInt(PREF_AUTO_REFRESH_OLD, DEFAULT_AUTO_REFRESH));
-                _restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING, DEFAULT_DIR_MONITORING);
+                //_restoreDirMonitoring = EditorPrefs.GetBool(PREF_DIR_MONITORING, DEFAULT_DIR_MONITORING);
+
                 //AssetDatabase.DisallowAutoRefresh();
                 EditorApplication.LockReloadAssemblies();
-                EditorPrefs.SetBool(PREF_DIR_MONITORING, false);
+                //EditorPrefs.SetBool(PREF_DIR_MONITORING, false);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH, 0);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH_OLD, 0);
             }
             else
             {
-                EditorPrefs.SetBool(PREF_DIR_MONITORING, _restoreDirMonitoring);
+                //EditorPrefs.SetBool(PREF_DIR_MONITORING, _restoreDirMonitoring);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH, _restoreAutoRefresh);
                 EditorPrefs.SetInt(PREF_AUTO_REFRESH_OLD, _restoreAutoRefresh);
 
