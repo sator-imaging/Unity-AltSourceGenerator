@@ -7,12 +7,11 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Object = UnityEngine.Object;
 
 
 namespace SatorImaging.UnitySourceGenerator
 {
-    internal class ProjectSettingsPanel : SettingsProvider
+    public class ProjectSettingsPanel : SettingsProvider
     {
         const float PADDING_WIDTH = 4;
         const string DISPLAY_NAME = "Alternative Source Generator for Unity";
@@ -86,20 +85,29 @@ namespace SatorImaging.UnitySourceGenerator
 
 
         static ProjectSettingsData _settings = ProjectSettingsData.instance;
-        static string[] _generatorPaths = Array.Empty<string>();
-        static bool[] _isEmitterExists = Array.Empty<bool>();
-        static string[] _emitterPaths = Array.Empty<string>();
-        static string _generatorPathToShowEmitters = null;
-        static Dictionary<string, string> _generatorNameToOutputFileName = new();
-        // GUI classes cannot be initialized on field definition.
+        static Type _generatorTypeToShowEmittersInGUI = null;
+        static Type[] _referencingEmittersToShowInGUI = Array.Empty<Type>();
+        static Type[] _generatorTypes = Array.Empty<Type>();
+        static bool[] _isGeneratorHasEmitters = Array.Empty<bool>();
+        static Dictionary<Type, string> _targetClassToScriptFilePath = new();
+        static Dictionary<Type, string[]> _targetClassToOutputFilePaths = new();
+        static Dictionary<Type, string[]> _targetClassToOutputFileNames = new();
+        // some GUI classes cannot be accessed on field definition.
         static GUIContent gui_emittersBtn;
         static GUIContent gui_deleteBtn;
         static GUIContent gui_runBtn;
         static GUIContent gui_unveilBtn;
-        static GUILayoutOption gui_toggleWidth;
-        static GUILayoutOption gui_buttonWidth;
         static GUIStyle gui_noBGButtonStyle;
         static GUIStyle gui_deleteMiniLabel;
+        static GUIContent gui_suspendAutoReloadLabel = new GUIContent(" Suspend Auto Reload while Unity Editor in Background  *experimental");
+        static GUIContent gui_autoRunLabel = new GUIContent(" Auto Run Generators on Script Update / Reimport");
+        static GUIContent gui_buttonColumnLabel = new GUIContent("On    Run");
+        static GUIContent gui_refEmittersLabel = new GUIContent("Referencing Emitters");
+        static GUIContent gui_multiGeneratorsLabel = new GUIContent("MULTIPLE GENERATORS");
+        static GUIContent gui_noSourceGenLabel = new GUIContent("NO SOURCE GENERATORS IN PROJECT");
+        static GUIContent gui_debugLabel = new GUIContent("DEBUG");
+        static GUILayoutOption gui_toggleWidth = GUILayout.Width(16);
+        static GUILayoutOption gui_buttonWidth = GUILayout.Width(32);
 
         // NOTE: class is reference type and reference type variable is "passed by value".
         //       to take reference to newly created object, need `ref` chain.
@@ -107,10 +115,8 @@ namespace SatorImaging.UnitySourceGenerator
         {
             gui_emittersBtn ??= new(EditorGUIUtility.IconContent("d_icon dropdown"));
             gui_deleteBtn ??= new(EditorGUIUtility.IconContent("d_TreeEditor.Trash"));
-            gui_runBtn ??= new(EditorGUIUtility.IconContent("PlayButton On"));//d_playLoopOff
-            gui_unveilBtn ??= new(EditorGUIUtility.IconContent("d_Linked"));//SavePassive/SaveActive/SaveFromPlay/d_pick/
-            gui_toggleWidth ??= GUILayout.Width(16);
-            gui_buttonWidth ??= GUILayout.Width(32);
+            gui_runBtn ??= new(EditorGUIUtility.IconContent("PlayButton On"));
+            gui_unveilBtn ??= new(EditorGUIUtility.IconContent("d_Linked"));
             if (gui_noBGButtonStyle == null)
             {
                 gui_noBGButtonStyle = new(EditorStyles.iconButton);
@@ -129,18 +135,36 @@ namespace SatorImaging.UnitySourceGenerator
             _settings = ProjectSettingsData.instance;
             _settings.hideFlags = HideFlags.HideAndDontSave & ~HideFlags.NotEditable;
 
-            _generatorPaths = USGEngine.TypeNameToInfo
-                // remove emitter class. it can be access thru referencing emitter list.
-                .Where(static x => x.Value.TargetClass == null || x.Value.Attribute.GeneratorClass == null)
-                .Select(static x => USGUtility.GetAssetPathByName(x.Key))
-                //.Where(static x => x.StartsWith("Assets/"))
+            // caching heavy ops
+            _targetClassToOutputFilePaths = USGEngine.GeneratorInfoList
+                .ToLookup(static x => x.TargetClass)
+                .ToDictionary(
+                    static x => x.Key,
+                    static x => x.Select(static x => USGEngine.GetGeneratorOutputPath(x)).ToArray());
+            _targetClassToOutputFileNames = _targetClassToOutputFilePaths
+                .ToDictionary(
+                    static x => x.Key,
+                    static x => x.Value.Select(static x => Path.GetFileName(x)).ToArray());
+
+            _generatorTypes = USGEngine.GeneratorInfoList
+                .Select(static x => x.Attribute.GeneratorClass)
+                .Union(_targetClassToOutputFileNames
+                    .Where(static x => x.Value.Length > 1)
+                    .Select(static x => x.Key))
+                .Distinct()
+                .OrderBy(static x => x.FullName)
                 .ToArray();
-            _isEmitterExists = _generatorPaths
-                .Select(static x => GetEmitters(x).Length > 0)
+            _isGeneratorHasEmitters = _generatorTypes
+                .Select(static x => GetReferencingEmitters(x).Length > 0)
                 .ToArray();
-            _emitterPaths = GetEmitters(null);  //clear
-            _generatorNameToOutputFileName = USGEngine.TypeNameToInfo
-                .ToDictionary(static x => x.Key, static x => x.Value.OutputFileName);
+            _referencingEmittersToShowInGUI = GetReferencingEmitters(null);  // not only set variable, but clear ref emitters panel settings.
+
+            _targetClassToScriptFilePath = USGEngine.GeneratorInfoList
+                .Select(static x => x.TargetClass)
+                .Union(_generatorTypes)
+                .ToDictionary(
+                    static x => x,
+                    static x => USGUtility.GetAssetPathByType(x) ?? throw new Exception());
 
             Editor.CreateCachedEditor(_settings, null, ref cachedEditor);
         }
@@ -159,8 +183,8 @@ namespace SatorImaging.UnitySourceGenerator
                 EditorGUILayout.BeginVertical();
                 {
                     EditorGUI.BeginChangeCheck();
-                    var suspendAutoReload = EditorGUILayout.ToggleLeft(" Suspend Auto Reload while Unity Editor in Background  *experimental", _settings.SuspendAutoReloadWhileEditorInBackground);
-                    var autoEmit = EditorGUILayout.ToggleLeft(" Auto Run Generators on Script Update / Reimport", _settings.AutoEmitOnScriptUpdate);
+                    var suspendAutoReload = EditorGUILayout.ToggleLeft(gui_suspendAutoReloadLabel, _settings.SuspendAutoReloadWhileEditorInBackground);
+                    var autoEmit = EditorGUILayout.ToggleLeft(gui_autoRunLabel, _settings.AutoEmitOnScriptUpdate);
                     if (EditorGUI.EndChangeCheck())
                     {
                         _settings.SuspendAutoReloadWhileEditorInBackground = suspendAutoReload;
@@ -169,28 +193,28 @@ namespace SatorImaging.UnitySourceGenerator
                     }
                     //EditorGUILayout.Space();
 
-                    EditorGUILayout.LabelField("On    Run", EditorStyles.miniLabel);
-                    if (_generatorPaths.Length == 0)
-                        EditorGUILayout.LabelField("NO SOURCE GENERATORS IN PROJECT");
+                    EditorGUILayout.LabelField(gui_buttonColumnLabel, EditorStyles.miniLabel);
+                    if (_generatorTypes.Length == 0)
+                        EditorGUILayout.LabelField(gui_noSourceGenLabel);
                     else
-                        for (int i = 0; i < _generatorPaths.Length; i++)
+                        for (int i = 0; i < _generatorTypes.Length; i++)
                         {
-                            DrawGenerator(_generatorPaths[i], _isEmitterExists[i]);
+                            DrawGenerator(_generatorTypes[i], _isGeneratorHasEmitters[i]);
                         }
                     EditorGUILayout.Space();
 
-                    EditorGUILayout.LabelField("Referencing Emitters");
-                    if (_generatorPathToShowEmitters != null)
+                    if (_generatorTypeToShowEmittersInGUI != null)
                     {
-                        for (int i = 0; i < _emitterPaths.Length; i++)
+                        EditorGUILayout.LabelField(gui_refEmittersLabel, EditorStyles.largeLabel);
+                        for (int i = 0; i < _referencingEmittersToShowInGUI.Length; i++)
                         {
-                            DrawGenerator(_emitterPaths[i], false);
+                            DrawGenerator(_referencingEmittersToShowInGUI[i], false);
                         }
                     }
                     EditorGUILayout.Space();
 
                     GUILayout.FlexibleSpace();
-                    _debugFoldout = EditorGUILayout.Foldout(_debugFoldout, "DEBUG", true);
+                    _debugFoldout = EditorGUILayout.Foldout(_debugFoldout, gui_debugLabel, true);
                     if (_debugFoldout)
                     {
                         cachedEditor.OnInspectorGUI();
@@ -208,11 +232,12 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
-        static void DrawGenerator(string filePath, bool showEmitterBtn)
+        static void DrawGenerator(Type t, bool showEmitterBtn)//string filePath, bool showEmitterBtn)
         {
             EditorGUILayout.BeginHorizontal();
             {
-                var fileName = Path.GetFileNameWithoutExtension(filePath);
+                // NOTE: USGUtility functions are heavy for use in GUI loops, cache it!!
+                var filePath = _targetClassToScriptFilePath[t];
 
                 EditorGUI.BeginChangeCheck();
                 var isOn = EditorGUILayout.Toggle(!_settings.AutoEmitDisabledPaths.Contains(filePath), gui_toggleWidth);
@@ -229,14 +254,14 @@ namespace SatorImaging.UnitySourceGenerator
                 //run
                 if (GUILayout.Button(gui_runBtn, gui_buttonWidth))
                 {
-                    Debug.Log($"[{nameof(UnitySourceGenerator)}] Generator running: {fileName}");
-                    USGUtility.ForceGenerateByName(fileName, false);
+                    Debug.Log($"[{nameof(UnitySourceGenerator)}] Generator running: {t.FullName}");
+                    USGUtility.ForceGenerateByType(t, false);
                 }
 
                 //label
-                if (EditorGUILayout.LinkButton(fileName))
+                if (EditorGUILayout.LinkButton(t.Name))
                 {
-                    EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(filePath));
+                    EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<MonoScript>(filePath));
                 }
 
                 //emitters??
@@ -244,38 +269,56 @@ namespace SatorImaging.UnitySourceGenerator
                 {
                     if (GUILayout.Button(gui_emittersBtn, gui_noBGButtonStyle))
                     {
-                        _emitterPaths = GetEmitters(filePath);
+                        _referencingEmittersToShowInGUI = GetReferencingEmitters(t);
                     }
                 }
                 //unveil??
                 else
                 {
-                    if (GUILayout.Button(gui_unveilBtn, gui_noBGButtonStyle))
-                    {
-                        EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(
-                            USGEngine.GetGeneratorOutputPath(filePath, _generatorNameToOutputFileName[fileName])));
-                    }
+                    if (_targetClassToOutputFilePaths.ContainsKey(t))
+                        for (int i = 0; i < _targetClassToOutputFilePaths[t].Length; i++)
+                        {
+                            if (GUILayout.Button(gui_unveilBtn, gui_noBGButtonStyle))
+                            {
+                                EditorGUIUtility.PingObject(
+                                    AssetDatabase.LoadAssetAtPath<MonoScript>(_targetClassToOutputFilePaths[t][i]));
+                            }
+                        }
                 }
 
                 //deleteBtn
-                if (_generatorNameToOutputFileName[fileName]?.Length is > 0)
+                if (_targetClassToOutputFilePaths.ContainsKey(t))
                 {
-                    GUILayout.FlexibleSpace();
-                    if (EditorGUIUtility.currentViewWidth > _settings.DenseViewWidthThreshold)
-                        GUILayout.Label(_generatorNameToOutputFileName[fileName], gui_deleteMiniLabel);
-                    if (GUILayout.Button(gui_deleteBtn))//, gui_noBGButtonStyle))
+                    if (_targetClassToOutputFilePaths[t].Length == 1)
                     {
-                        var genFullPath = USGEngine.GetGeneratorOutputPath(filePath, _generatorNameToOutputFileName[fileName]);
-                        if (EditorUtility.DisplayDialog(nameof(UnitySourceGenerator),
-                            $"Would you like to delete emitted file?\n" +
-                            $"- {_generatorNameToOutputFileName[fileName]}\n" +
-                            $"\n" +
-                            $"File Path: {genFullPath}",
-                            "Yes", "cancel"))
+                        GUILayout.FlexibleSpace();
+                        if (EditorGUIUtility.currentViewWidth > _settings.DenseViewWidthThreshold)
+                            GUILayout.Label(_targetClassToOutputFileNames[t][0], gui_deleteMiniLabel);
+                    }
+                    else
+                    {
+                        GUILayout.FlexibleSpace();
+                        //if (EditorGUIUtility.currentViewWidth > _settings.DenseViewWidthThreshold)
+                        //    GUILayout.Label(gui_multiGeneratorsLabel, gui_deleteMiniLabel);
+                    }
+
+                    for (int i = 0; i < _targetClassToOutputFilePaths[t].Length; i++)
+                    {
+                        if (GUILayout.Button(gui_deleteBtn))
                         {
-                            File.Delete(genFullPath);
-                            Debug.Log($"[{nameof(UnitySourceGenerator)}] File is deleted: {genFullPath}");
-                            AssetDatabase.Refresh();
+                            if (File.Exists(_targetClassToOutputFilePaths[t][i])
+                            && EditorUtility.DisplayDialog(
+                                nameof(UnitySourceGenerator),
+                                $"Would you like to delete emitted file?\n" +
+                                $"- {_targetClassToOutputFileNames[t][i]}\n" +
+                                $"\n" +
+                                $"File Path: {_targetClassToOutputFilePaths[t][i]}",
+                                "Yes", "cancel"))
+                            {
+                                File.Delete(_targetClassToOutputFilePaths[t][i]);
+                                Debug.Log($"[{nameof(UnitySourceGenerator)}] File is deleted: {_targetClassToOutputFilePaths[t][i]}");
+                                AssetDatabase.Refresh();
+                            }
                         }
                     }
                 }
@@ -284,18 +327,22 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
-        static string[] GetEmitters(string generatorPath)
+        static Type[] GetReferencingEmitters(Type t)
         {
-            _generatorPathToShowEmitters = generatorPath;
-            if (string.IsNullOrEmpty(generatorPath))
-                return Array.Empty<string>();
+            _generatorTypeToShowEmittersInGUI = t;
+            if (t == null)
+                return Array.Empty<Type>();
 
-            var clsName = Path.GetFileNameWithoutExtension(generatorPath);
-            return USGEngine.TypeNameToInfo
-                .Where(x => x.Value.Attribute.GeneratorClass?.Name == clsName || x.Value.TargetClass?.Name == clsName)
-                .Select(static x => USGUtility.GetAssetPathByName(x.Key))
-                .Where(x => x != generatorPath)  // remove itself
+            // NOTE: self-emit generator can have other target.
+            var ret = USGEngine.GeneratorInfoList
+                .Where(x => x.Attribute.GeneratorClass == t)
+                .Select(static x => x.TargetClass)
                 .ToArray();
+
+            if (ret.Length == 1 && ret[0] == t)
+                return Array.Empty<Type>();
+
+            return ret;
         }
 
 

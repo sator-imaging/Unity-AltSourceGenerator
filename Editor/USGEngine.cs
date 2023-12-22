@@ -13,12 +13,12 @@ using UnityEngine;
 
 namespace SatorImaging.UnitySourceGenerator
 {
-    public class USGEngine : AssetPostprocessor
+    /// <summary>
+    /// > [!WARNING]
+    /// > Works only on Unity Editor
+    /// </summary>
+    public sealed class USGEngine : AssetPostprocessor
     {
-        /////<summary>This will be disabled automatically after every `ProcessFile()` call or Unity import event.</summary>
-        //static bool IgnoreOverwriteSettingOnAttribute = false;
-
-
         const int BUFFER_LENGTH = 1024 * 64;
         const int BUFFER_MAX_CHAR_LENGTH = BUFFER_LENGTH / 3;  // worst case of UTF-8
         const string GENERATOR_PREFIX = ".";
@@ -28,13 +28,15 @@ namespace SatorImaging.UnitySourceGenerator
         const string ASSETS_DIR_SLASH = ASSETS_DIR_NAME + "/";
         const string TARGET_FILE_EXT = @".cs";
         const string PATH_PREFIX_TO_IGNORE = @"Packages/";
+        private const string METHOD_NAME_OUTPUT_FILE_NAME = "OutputFileName";
+        private const string METHOD_NAME_EMIT = "Emit";
         readonly static char[] DIR_SEPARATORS = new char[] { '\\', '/' };
 
 
         static bool IsAppropriateTarget(string filePath)
         {
-            if (!filePath.EndsWith(TARGET_FILE_EXT) ||
-                !filePath.StartsWith(ASSETS_DIR_SLASH))
+            if (!filePath.EndsWith(TARGET_FILE_EXT, StringComparison.OrdinalIgnoreCase) ||
+                !filePath.StartsWith(ASSETS_DIR_SLASH, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
@@ -52,9 +54,10 @@ namespace SatorImaging.UnitySourceGenerator
             //       As a result, delete/import event loops infinitely and file cannot be deleted.
             // NOTE: [DidReloadScripts] is executed before AssetPostprocessor, cannot be used.
 
-            // TODO: Unity sometimes reloads updated scripts by Visual Studio in background automatically.
+            // TODO: Unity sometimes reloads scripts in background automatically.
+            //       (it happens when Save All command was done in Visual Studio, for example.)
             //       In this situation, code generation will be done with script data right before saving.
-            //       It cannot be solved on C#, simply restart Unity.
+            //       so that generated code is not what expected, and this behaviour cannot be solved on C#.
             //       Using [DidReloadScripts] or EditorApplication.delayCall, It works fine with Reimport
             //       menu command but OnPostprocessAllAssets event doesn't work as expected.
             //       (script runs with static field cleared even though .Clear() is only in ProcessingFiles().
@@ -67,9 +70,12 @@ namespace SatorImaging.UnitySourceGenerator
             // NOTE: Use project-wide ScriptableObject as a temporary storage.
             for (int i = 0; i < importedAssets.Length; i++)
             {
-                if (_settings.PathsToSkipImportEvent.TryRemove(importedAssets[i])) continue;
-                if (_settings.AutoEmitDisabledPaths.Contains(importedAssets[i])) continue;
-                if (!IsAppropriateTarget(importedAssets[i])) continue;
+                if (_settings.PathsToSkipImportEvent.TryRemove(importedAssets[i]))
+                    continue;
+                if (_settings.AutoEmitDisabledPaths.Contains(importedAssets[i], StringComparer.Ordinal))
+                    continue;
+                if (!IsAppropriateTarget(importedAssets[i]))
+                    continue;
 
                 _settings.ImportedScriptPaths.TryAddUnique(importedAssets[i]);
             }
@@ -80,7 +86,7 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
-        // NOTE: event registration is done in InitializeOnLoadMethod
+        // NOTE: event registration is done in InitializeOnLoad
         static void OnCompilationFinished(object context)
         {
             if (!_settings.AutoEmitOnScriptUpdate)
@@ -88,99 +94,39 @@ namespace SatorImaging.UnitySourceGenerator
 
             try
             {
-                RunGenerators(_settings.ImportedScriptPaths.ToArray(), false);
+                RunGenerators(_settings.ImportedScriptPaths.ToArray());//, false);
             }
             catch
             {
                 _settings.ImportedScriptPaths.Clear();
                 _settings.Save();
+                throw;
             }
         }
 
 
-        // NOTE: script update event sequence.
-        //       -> collect updated generators & referencing emitters
-        //       -> run only collected generators
-        //       -> if something updated, queue referencing emitter on next event
-        //          else run referencing emitters.
-
-        static bool TryGetEmitterInfo(string emitterName, out Dictionary<string, CachedTypeInfo> outEmitterPathToCachedInfo)
+        static bool RunGenerators(string[] targetPaths)
         {
-            // TODO: more efficient way to find generator
-            outEmitterPathToCachedInfo = new();
-            foreach (var info in TypeNameToInfo.Values)
-            {
-                if (info.TargetClass == null || info.Attribute.GeneratorClass?.Name != emitterName)
-                    continue;
-
-                var path = USGUtility.GetAssetPathByName(info.TargetClass.Name);
-                if (path != null && IsAppropriateTarget(path))
-                {
-                    outEmitterPathToCachedInfo.TryAdd(path, info);
-                }
-            }
-
-            return outEmitterPathToCachedInfo.Count > 0;
-        }
-
-        static bool RunGenerators(string[] targetPaths, bool runReferencingEmittersNow)
-        {
-            var generatorsToRun = new Dictionary<string, CachedTypeInfo>();
-            var emittersToRun = new Dictionary<string, CachedTypeInfo>();
-            for (int i = 0; i < targetPaths.Length; i++)
-            {
-                if (!TryGetGeneratorInfoOrEmitterName(targetPaths[i], out var generatorInfo, out var emitterName))
-                    continue;
-
-                if (generatorInfo != null)
-                    generatorsToRun.TryAdd(targetPaths[i], generatorInfo);
-
-                if (emitterName != null)
-                {
-                    if (TryGetEmitterInfo(emitterName, out var emitterPathToInfo))
-                        foreach (var path_info in emitterPathToInfo)
-                        {
-                            emittersToRun.TryAdd(path_info.Key, path_info.Value);
-                        }
-                }
-            }
-
-        RUN_EMITTERS_NOW:
-            if (runReferencingEmittersNow)
-            {
-                foreach (var path_info in emittersToRun)
-                {
-                    generatorsToRun.TryAdd(path_info.Key, path_info.Value);
-                }
-                emittersToRun.Clear();
-            }
-
             bool somethingUpdated = false;
             try
             {
                 var pathsToImportSet = new HashSet<string>();
-                foreach (var path_info in generatorsToRun)
-                {
-                    if (TryEmit(path_info.Key, path_info.Value))
-                    {
-                        somethingUpdated = true;
-                        pathsToImportSet.Add(GetGeneratorOutputPath(path_info.Key, path_info.Value.OutputFileName));
-                    }
-                }
 
-                // referencing emitters run immediately if nothing updated.
-                if (!somethingUpdated && emittersToRun.Count > 0)
+                for (int i = 0; i < targetPaths.Length; i++)
                 {
-                    runReferencingEmittersNow = true;
-                    goto RUN_EMITTERS_NOW;
-                }
-                // or queue on next update
-                foreach (var path_info in emittersToRun)
-                {
-                    // don't re-run
-                    if (generatorsToRun.ContainsKey(path_info.Key))
+                    if (!TryGetTargetOrGeneratorClassByPath(targetPaths[i], out var targetOrGeneratorCls))
                         continue;
-                    pathsToImportSet.Add(path_info.Key);
+
+                    // NOTE: need to search both target and generator
+                    foreach (var info in _generatorInfoList
+                        .Where(x => x.TargetClass == targetOrGeneratorCls || x.Attribute.GeneratorClass == targetOrGeneratorCls))
+                    {
+                        if (TryEmit(info))
+                        {
+                            somethingUpdated = true;
+                            pathsToImportSet.Add(GetGeneratorOutputPath(info));
+                        }
+                    }
                 }
 
                 //import
@@ -188,8 +134,7 @@ namespace SatorImaging.UnitySourceGenerator
                 {
                     foreach (var path in pathsToImportSet)
                     {
-                        if (generatorsToRun.ContainsKey(path))
-                            _settings.PathsToSkipImportEvent.TryAddUnique(path);
+                        _settings.PathsToSkipImportEvent.TryAddUnique(path);
                         AssetDatabase.ImportAsset(path);
                         somethingUpdated = true;
                     }
@@ -202,89 +147,69 @@ namespace SatorImaging.UnitySourceGenerator
             }
             finally
             {
-                foreach (var path_info in generatorsToRun)
-                    _settings.PathsToIgnoreOverwriteSettingOnAttribute.TryRemove(path_info.Key);
+                for (int i = 0; i < targetPaths.Length; i++)
+                {
+                    _settings.PathsToIgnoreOverwriteSettingOnAttribute.TryRemove(targetPaths[i]);
+                }
             }
 
             return somethingUpdated;
         }
 
 
-        ///<summary>Run specified generator upon request. Designed for use in Unity build event.</summary>
-        ///<param name="assetsRelPath">Path need to be started with "Assets/"</param>
-        ///<param name="autoRunReferencingEmittersNow">Set true to run referencing emitters immediately. For use in build event.</param>
-        ///<returns>true if file is written</returns>
-        public static bool ProcessFile(string assetsRelPath,
-            bool ignoreOverwriteSettingOnAttribute, bool autoRunReferencingEmittersNow = false)
-        {
-            if (ignoreOverwriteSettingOnAttribute)
-                _settings.PathsToIgnoreOverwriteSettingOnAttribute.TryAddUnique(assetsRelPath);
-            return RunGenerators(new string[] { assetsRelPath }, autoRunReferencingEmittersNow);
-        }
-
-
-        static bool TryGetGeneratorInfoOrEmitterName(
-            string assetsRelPath, out CachedTypeInfo outGeneratorInfo, out string outEmitterName)
+        static bool TryGetTargetOrGeneratorClassByPath(string assetsRelPath, out Type targetOrGeneratorCls)
         {
             if (!File.Exists(assetsRelPath))
                 throw new FileNotFoundException(assetsRelPath);
 
+            targetOrGeneratorCls = null;
 
-            outGeneratorInfo = null;
-            outEmitterName = null;
+            var generatorClsName = Path.GetFileNameWithoutExtension(assetsRelPath);
 
-            var clsName = Path.GetFileNameWithoutExtension(assetsRelPath);
+            // NOTE: File naming convention
+            //       Emitter: <Prefix>.<EmitterClassName>.<GeneratorClassName>.g.cs
+            //       SelfGen: <Prefix>.<GeneratorClassName>.g.cs
+            if (!generatorClsName.EndsWith(GENERATOR_EXT, StringComparison.OrdinalIgnoreCase))
+            {
+                if (AssetDatabase.LoadAssetAtPath<MonoScript>(assetsRelPath) is not MonoScript mono)
+                    throw new NotSupportedException("path is not script file: " + assetsRelPath);
 
-            // find generator from emitted file.
-            if (!TypeNameToInfo.ContainsKey(clsName))
+                targetOrGeneratorCls = mono.GetClass();
+            }
+            else  // try find generator for .g.cs file
             {
                 // NOTE: When generated code has error, fix it and save will invoke Unity
                 //       import event and then same error code will be generated again.
                 //       Emit from generated file should only work when forced.
                 //       (delaying code generation won't solve this behaviour...? return anyway)
-                if (!_settings.PathsToIgnoreOverwriteSettingOnAttribute.Contains(assetsRelPath))
+                if (!_settings.PathsToIgnoreOverwriteSettingOnAttribute.Contains(assetsRelPath, StringComparer.Ordinal))
                     return false;
 
-                // try find generator
-                if (!clsName.EndsWith(GENERATOR_EXT))
+                generatorClsName = Path.GetFileNameWithoutExtension(generatorClsName);
+                generatorClsName = Path.GetExtension(generatorClsName);
+                if (generatorClsName.Length == 0)
+                    return false;
+                generatorClsName = generatorClsName.Substring(1);
+
+                var found = _generatorInfoList.FirstOrDefault(x => x.Attribute.GeneratorClass.Name == generatorClsName);
+                if (found == default)
                     return false;
 
-                clsName = Path.GetFileNameWithoutExtension(clsName);
-                clsName = Path.GetExtension(clsName);
-
-                if (clsName.Length == 0) return false;
-                clsName = clsName.Substring(1);
-
-                if (!TypeNameToInfo.ContainsKey(clsName))
-                    return false;
+                targetOrGeneratorCls = found.Attribute.GeneratorClass;
             }
 
-
-            var info = TypeNameToInfo[clsName];
-            if (info == null) return false;
-
-            if (info.TargetClass == null)
-            {
-                outEmitterName = clsName;
-                return true;
-            }
-
-
-            if (!TryBuildOutputFileName(info))
-            {
-                Debug.LogError($"[{nameof(UnitySourceGenerator)}] Output file name is invalid: {info.OutputFileName}");
-                return false;
-            }
-
-            outGeneratorInfo = info;
             return true;
         }
 
 
-        static bool TryEmit(string assetsRelPath, CachedTypeInfo info)
+        static bool TryEmit(CachedGeneratorInfo info)
         {
-            var generatorCls = info.Attribute.GeneratorClass ?? info.TargetClass;
-            string outputPath = GetGeneratorOutputPath(assetsRelPath, info.OutputFileName);
+            var assetsRelPath = USGUtility.GetAssetPathByType(info.TargetClass);
+            if (assetsRelPath == null)
+                throw new FileNotFoundException("target class not found.");
+
+            var generatorCls = info.Attribute.GeneratorClass;
+            string outputPath = GetGeneratorOutputPath(info);
 
             var context = new USGContext
             {
@@ -317,7 +242,7 @@ namespace SatorImaging.UnitySourceGenerator
             if (File.Exists(context.OutputPath))
             {
                 if (!info.Attribute.OverwriteIfFileExists &&
-                    !_settings.PathsToIgnoreOverwriteSettingOnAttribute.Contains(assetsRelPath))
+                    !_settings.PathsToIgnoreOverwriteSettingOnAttribute.Contains(assetsRelPath, StringComparer.Ordinal))
                     return false;
             }
 
@@ -332,16 +257,17 @@ namespace SatorImaging.UnitySourceGenerator
             using (var fs = new FileStream(context.OutputPath, FileMode.Create, FileAccess.Write))
             {
                 //Span<byte> buffer = stackalloc byte[BUFFER_LENGTH];
-                var rentBufferToReturn = ArrayPool<byte>.Shared.Rent(BUFFER_LENGTH);
+                var rentalBuffer = ArrayPool<byte>.Shared.Rent(BUFFER_LENGTH);
                 try
                 {
-                    var buffer = rentBufferToReturn.AsSpan(0, BUFFER_LENGTH);
+                    Span<byte> buffer = rentalBuffer;
                     var span = sb.ToString().AsSpan();
                     int len, written;
                     for (int start = 0; start < span.Length; start += BUFFER_MAX_CHAR_LENGTH)
                     {
                         len = BUFFER_MAX_CHAR_LENGTH;
-                        if (len + start > span.Length) len = span.Length - start;
+                        if (len + start > span.Length)
+                            len = span.Length - start;
 
                         written = info.Attribute.OutputFileEncoding.GetBytes(span.Slice(start, len), buffer);
                         fs.Write(buffer.Slice(0, written));
@@ -350,7 +276,7 @@ namespace SatorImaging.UnitySourceGenerator
                 }
                 finally
                 {
-                    ArrayPool<byte>.Shared.Return(rentBufferToReturn);
+                    ArrayPool<byte>.Shared.Return(rentalBuffer);
                 }
             }
 
@@ -364,121 +290,112 @@ namespace SatorImaging.UnitySourceGenerator
         }
 
 
+        /*  entry  ================================================================ */
 
-        //internals----------------------------------------------------------------------
+        ///<summary>Run specified generator upon request. Designed for use in Unity build event.</summary>
+        ///<param name="assetsRelPath">Path need to be started with "Assets/"</param>
+        ///<param name="autoRunReferencingEmittersNow">Set true to run referencing emitters immediately. For use in build event.</param>
+        ///<returns>true if file is written</returns>
+        [Obsolete("use USGUtility.ForceGenerateByType() instead.")]
+        public static bool ProcessFile(string assetsRelPath, bool ignoreOverwriteSettingOnAttribute
+            /* TODO: remove for future release */
+            , bool autoRunReferencingEmittersNow = false)
+            => Process(new string[] { assetsRelPath }, ignoreOverwriteSettingOnAttribute);
 
-        static string GetGeneratorOutputFileNameFromGeneratorPath(string generatorPath)
+
+        internal static bool Process(string[] assetsRelPaths, bool ignoreOverwriteSettingOnAttribute)
         {
-            var clsName = Path.GetFileNameWithoutExtension(generatorPath);
-            return TypeNameToInfo.FirstOrDefault(x => x.Key == clsName).Value?.OutputFileName;
+            if (ignoreOverwriteSettingOnAttribute)
+            {
+                for (int i = 0; i < assetsRelPaths.Length; i++)
+                    _settings.PathsToIgnoreOverwriteSettingOnAttribute.TryAddUnique(assetsRelPaths[i]);
+            }
+            return RunGenerators(assetsRelPaths);
         }
 
-        ///<param name="generatorPath">Relative path from Unity project directory.</param>
-        ///<param name="fileName">null to auto retrieve from database.</param>
-        internal static string GetGeneratorOutputPath(string generatorPath, string fileName)
-        {
-            fileName ??= GetGeneratorOutputFileNameFromGeneratorPath(generatorPath);
 
-            // NOTE: use relative path, not full path.
-            //       revert it back to full path if something went wrong.
-            string outputPath = Path.GetDirectoryName(generatorPath).Replace('\\', '/');
-            if (!outputPath.EndsWith(GENERATOR_DIR))
-                outputPath += GENERATOR_DIR;
-            return outputPath + '/' + fileName;
+        /*  utility  ================================================================ */
+
+        ///<returns>throw if failed.</returns>
+        internal static string GetGeneratorOutputPath(CachedGeneratorInfo info)
+        {
+            var fileName = info.OutputFileName;
+            if (fileName == null || fileName.Length == 0)
+                throw new Exception("cannot retrieve output path.");
+
+            string dirPath = USGUtility.GetAssetPathByType(info.TargetClass);
+            if (dirPath == null)
+                throw new FileNotFoundException("generator script file is not found.");
+
+            dirPath = Path.GetDirectoryName(dirPath).Replace('\\', '/');
+            if (!dirPath.EndsWith(GENERATOR_DIR, StringComparison.OrdinalIgnoreCase))
+                dirPath += GENERATOR_DIR;
+
+            return dirPath + '/' + fileName;
         }
 
 
-        static readonly BindingFlags METHOD_FLAGS =
-                                        BindingFlags.NonPublic |
-                                        BindingFlags.Public |
-                                        BindingFlags.Static
+        /*  typedef  ================================================================ */
+
+        internal sealed class CachedGeneratorInfo
+        {
+            public Type TargetClass { get; internal init; }
+            public UnitySourceGeneratorAttribute Attribute { get; internal init; }
+
+            public string OutputFileName { get; internal set; }
+            public MethodInfo EmitMethod { get; internal set; }
+            public MethodInfo OutputFileNameMethod { get; internal set; }
+        }
+
+
+        /*  initialize  ================================================================ */
+
+        static readonly BindingFlags METHOD_FLAGS
+                                        = BindingFlags.NonPublic
+                                        | BindingFlags.Public
+                                        | BindingFlags.Static
                                         ;
 
-        // OPTIMIZE: Be ref struct?
-        internal class CachedTypeInfo
-        {
-            // TODO: more streamlined.
-            ///<summary>null if generator is only referenced from emitter classes.</summary>
-            public Type TargetClass;
-            public UnitySourceGeneratorAttribute Attribute;
 
-            public string OutputFileName;
-            public MethodInfo EmitMethod;
-            public MethodInfo OutputFileNameMethod;
-        }
+        readonly static List<CachedGeneratorInfo> _generatorInfoList = new();
+        internal static IReadOnlyList<CachedGeneratorInfo> GeneratorInfoList => _generatorInfoList;
 
-
-        internal readonly static Dictionary<string, CachedTypeInfo> TypeNameToInfo = new();
 
         [InitializeOnLoadMethod]
-        static void Initialize()
+        static void InitializeOnLoad()
         {
             CompilationPipeline.compilationFinished -= OnCompilationFinished;
             CompilationPipeline.compilationFinished += OnCompilationFinished;
 
-            /* NOTE: truncate unnecessary DLLs.
-            //       build LINQ here and copy paste resulting .Where() below
-            var assems = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(static x =>
-                {
-                    var n = x.GetName().Name;
-                    if ( //total 234files
-                        n.StartsWith("Unity") ||    // truncate to 95
-                        n.StartsWith("System.") ||  // truncate to 225
-                        n.StartsWith("Mono.") ||    // truncate to 229
-                        n == "mscorlib" ||          // tons of types inside
-                        n == "System"               // tons of types inside
-                    )
-                        return false;
-                    return true;
-                })
-                .Select(static x => x.GetName().Name + ": " + x.GetTypes().Count())
-                ;
-            Debug.Log($"#{assems.Count()} " + string.Join("\n", assems));
-            */
 
-
-            // OPTIMIZE: ReflectionOnlyGetType() can be used??
-            var infos = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(static x =>
+            // fantastic UnityEditor.TypeCache system!!
+            var generatorInfos = TypeCache.GetTypesWithAttribute<UnitySourceGeneratorAttribute>()
+                .SelectMany(static t =>
                 {
-                    var n = x.GetName().Name;
-                    if (
-                        n.StartsWith("Unity") ||    // truncate 234 files to 95
-                        n.StartsWith("System.") ||  // these have tons of types inside
-                        n.StartsWith("Mono.") ||
-                        n == "System" ||
-                        n == "mscorlib"
-                    )
-                        return false;
-                    return true;
-                })
-                .SelectMany(static a => a.GetTypes())
-                .Where(static t =>
-                    t.GetCustomAttribute<UnitySourceGeneratorAttribute>(false) != null &&
-                    // waiting for C# 11.0 //typeof(IUnitySourceGenerator).IsAssignableFrom(t) &&
-                    !TypeNameToInfo.ContainsKey(t.Name)
-                    )
-                .Select(static t =>
-                {
-                    var attr = t.GetCustomAttribute<UnitySourceGeneratorAttribute>(false);
-                    return new CachedTypeInfo
+                    var attrs = t.GetCustomAttributes<UnitySourceGeneratorAttribute>(false);
+                    var ret = new CachedGeneratorInfo[attrs.Count()];
+                    for (int i = 0; i < ret.Length; i++)
                     {
-                        TargetClass = t,
-                        Attribute = attr,
-                    };
+                        ret[i] = new CachedGeneratorInfo
+                        {
+                            TargetClass = t,
+                            Attribute = attrs.ElementAt(i),
+                        };
+                    }
+                    return ret;
                 })
                 ;
 
 
-            // TODO: Export constants definition
-            foreach (var info in infos)
+            foreach (var generatorInfo in generatorInfos)
             {
-                //Debug.Log($"[{nameof(UnitySourceGenerator)}] Processing...: {info.ClassName}");
+                // NOTE: self-emit generators which initialized without generator type parameter,
+                //       need to fill it correctly.
+                generatorInfo.Attribute._generatorClass ??= generatorInfo.TargetClass;
 
-                var generatorCls = info.Attribute.GeneratorClass ?? info.TargetClass;
-                var outputMethod = generatorCls.GetMethod("OutputFileName", METHOD_FLAGS, null, Type.EmptyTypes, null);
-                var emitMethod = generatorCls.GetMethod("Emit", METHOD_FLAGS, null, new Type[] { typeof(USGContext), typeof(StringBuilder) }, null);
+                var generatorCls = generatorInfo.Attribute.GeneratorClass;
+                var outputMethod = generatorCls.GetMethod(METHOD_NAME_OUTPUT_FILE_NAME, METHOD_FLAGS, null, Type.EmptyTypes, null);
+                var emitMethod = generatorCls.GetMethod(METHOD_NAME_EMIT, METHOD_FLAGS, null, new Type[] { typeof(USGContext), typeof(StringBuilder) }, null);
 
                 if (outputMethod == null || emitMethod == null)
                 {
@@ -486,39 +403,23 @@ namespace SatorImaging.UnitySourceGenerator
                     continue;
                 }
 
-                info.EmitMethod = emitMethod;
-                info.OutputFileNameMethod = outputMethod;
+                generatorInfo.EmitMethod = emitMethod;
+                generatorInfo.OutputFileNameMethod = outputMethod;
 
                 //filename??
-                if (!TryBuildOutputFileName(info))
+                if (!TryBuildOutputFileName(generatorInfo))
                 {
-                    Debug.LogError($"[{nameof(UnitySourceGenerator)}] Output file name is invalid: {info.OutputFileName}");
+                    Debug.LogError($"[{nameof(UnitySourceGenerator)}] Output file name is invalid: {generatorInfo.OutputFileName}");
                     continue;
                 }
 
-
-                TypeNameToInfo.TryAdd(info.TargetClass.Name, info);
-                if (generatorCls != info.TargetClass)
-                {
-                    // TODO: more streamlined.
-                    var genInfo = new CachedTypeInfo
-                    {
-                        TargetClass = null,
-                        OutputFileName = null,
-                        EmitMethod = null,
-                        OutputFileNameMethod = null,
-                        Attribute = info.Attribute,
-                    };
-
-                    TypeNameToInfo.TryAdd(generatorCls.Name, genInfo);
-                }
-
-
-            }//foreach
+                //register!!
+                _generatorInfoList.Add(generatorInfo);
+            }
         }
 
 
-        static bool TryBuildOutputFileName(CachedTypeInfo info)
+        static bool TryBuildOutputFileName(CachedGeneratorInfo info)
         {
             info.OutputFileName = (string)info.OutputFileNameMethod?.Invoke(null, null);
             if (string.IsNullOrWhiteSpace(info.OutputFileName))
@@ -527,7 +428,7 @@ namespace SatorImaging.UnitySourceGenerator
             string fileName = Path.GetFileNameWithoutExtension(info.OutputFileName);
             string fileExt = Path.GetExtension(info.OutputFileName);
             info.OutputFileName = fileName + GENERATOR_PREFIX + info.TargetClass.Name;
-            if (info.Attribute.GeneratorClass != null)
+            if (info.Attribute.GeneratorClass != info.TargetClass)
                 info.OutputFileName += GENERATOR_PREFIX + info.Attribute.GeneratorClass.Name;
             info.OutputFileName += GENERATOR_EXT + fileExt;
 
