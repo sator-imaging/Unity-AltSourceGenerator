@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### API Changes 😉
 
+#### Features works only on Unity Editor
+
+classes moved to `Editor` namespace.
+
 #### `USGEngine.ProcessFile()` will be removed
 
 use `USGUtility.ForceGenerateByType(typeof(...))` instead.
