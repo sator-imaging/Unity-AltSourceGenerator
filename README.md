@@ -25,7 +25,7 @@ As you already know, Roslyn's source generator is too sophisticated. This framew
 - [✅ TODO](#todo)
 
 
-<p><details lang="en" open><summary>📃 Table of Contents</summary>
+<p><details lang="en" --open><summary>📃 Table of Contents</summary>
 
 - [How to Use](#how-to-use)
     - [Method Generator](#method-generator)
@@ -62,11 +62,15 @@ How to Use
 
 Here is minimal implementation of source generator.
 
+See [API Reference](https://sator-imaging.github.io/Unity-AltSourceGenerator/) for further details.
+
+
 <p><details lang="ja" --open><summary><small>日本語 / JA</small></summary>
 
 最小限のソースジェネレーターの構成はこちら。`StringBuilder` が渡されるので書き込んで `true` を返せば `context.OutputPath` に内容を書き込みます。`false` を返せば書き込みを中止できます。
 
 <!------- End of Details JA Tag -------></details></p>
+
 
 
 ## Method Generator
@@ -209,7 +213,6 @@ Resulting file path will be:
 
 
 
-
 Coding Goodies
 ==============
 
@@ -284,8 +287,8 @@ usg(MyClass.Complex);  // -> global::...Dictionary<int, global::...List<global::
 Samples
 =======
 
-SceneBuildIndexGenerator
-------------------------
+`SceneBuildIndexGenerator`
+--------------------------
 
 This sample allows you to handle scene index more efficiently.
 
@@ -475,7 +478,7 @@ Usually, this problem happens when Unity automatically reloads updated scripts W
 Copyright
 =========
 
-Copyright &copy; 2023 Sator Imaging, all rights reserved.
+Copyright &copy; 2023-2024 Sator Imaging, all rights reserved.
 
 
 
@@ -490,7 +493,7 @@ copies or substantial portions of the Software.</summary>
 ```text
 MIT License
 
-Copyright (c) 2023 Sator Imaging
+Copyright (c) 2023-2024 Sator Imaging
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
