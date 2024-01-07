@@ -5,7 +5,7 @@ using UnityEditorInternal;
 using UnityEngine;
 
 
-namespace SatorImaging.UnitySourceGenerator
+namespace SatorImaging.UnitySourceGenerator.Editor
 {
     ///<summary>Polyfill for use in Unity 2019.</summary>
     ///<remarks>Output path is hard-coded.</remarks>

@@ -4,7 +4,7 @@ using System;
 using System.Reflection;
 using UnityEditor;
 
-namespace SatorImaging.UnitySourceGenerator
+namespace SatorImaging.UnitySourceGenerator.Editor
 {
     public static class EditorEvent
     {

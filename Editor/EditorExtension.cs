@@ -3,7 +3,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 
-namespace SatorImaging.UnitySourceGenerator
+namespace SatorImaging.UnitySourceGenerator.Editor
 {
     public static class EditorExtension
     {

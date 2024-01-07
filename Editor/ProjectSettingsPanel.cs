@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 
-namespace SatorImaging.UnitySourceGenerator
+namespace SatorImaging.UnitySourceGenerator.Editor
 {
     public class ProjectSettingsPanel : SettingsProvider
     {
@@ -32,7 +32,7 @@ namespace SatorImaging.UnitySourceGenerator
 
 
         Vector2 _scroll;
-        Editor _cachedEditor;
+        UnityEditor.Editor _cachedEditor;
 
         public override void OnActivate(string searchContext, VisualElement rootElement)
         {
@@ -64,7 +64,7 @@ namespace SatorImaging.UnitySourceGenerator
         public class USGWindow : EditorWindow
         {
             Vector2 _scroll;
-            Editor _cachedEditor;
+            UnityEditor.Editor _cachedEditor;
 
             void OnEnable()
             {
@@ -111,7 +111,7 @@ namespace SatorImaging.UnitySourceGenerator
 
         // NOTE: class is reference type and reference type variable is "passed by value".
         //       to take reference to newly created object, need `ref` chain.
-        static void Wakeup(ref Editor cachedEditor)
+        static void Wakeup(ref UnityEditor.Editor cachedEditor)
         {
             gui_emittersBtn ??= new(EditorGUIUtility.IconContent("d_icon dropdown"));
             gui_deleteBtn ??= new(EditorGUIUtility.IconContent("d_TreeEditor.Trash"));
@@ -166,12 +166,12 @@ namespace SatorImaging.UnitySourceGenerator
                     static x => x,
                     static x => USGUtility.GetAssetPathByType(x) ?? throw new Exception());
 
-            Editor.CreateCachedEditor(_settings, null, ref cachedEditor);
+            UnityEditor.Editor.CreateCachedEditor(_settings, null, ref cachedEditor);
         }
 
 
         static bool _debugFoldout;
-        static void DrawEditor(Editor cachedEditor, ref Vector2 currentScroll)
+        static void DrawEditor(UnityEditor.Editor cachedEditor, ref Vector2 currentScroll)
         {
             var restoreLabelWidth = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth * 0.2f;

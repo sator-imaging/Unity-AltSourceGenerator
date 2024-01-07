@@ -145,7 +145,7 @@ namespace {context.TargetClass.Namespace}
         public int callbackOrder => 0;
         public void OnPreprocessBuild(BuildReport report) => ForceUpdate();
 
-        static void ForceUpdate() => USGUtility.ForceGenerateByType(typeof(SceneBuildIndexGenerator), false);
+        static void ForceUpdate() => Editor.USGUtility.ForceGenerateByType(typeof(SceneBuildIndexGenerator), false);
 
         [InitializeOnLoadMethod]
         static void RegisterEvent()
