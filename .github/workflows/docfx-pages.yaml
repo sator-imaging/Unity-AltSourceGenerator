@@ -61,7 +61,7 @@ jobs:
           site_footer: '&copy; 2024 Sator Imaging'
 
           # optional
-          class_members: 'samePage'  # 'separatePages' or 'samePage'
+          class_members: 'separatePages'  # 'separatePages' or 'samePage'
           google_analytics: ''  # empty to disable
 
           # paths must be relative from .docfx folder.
