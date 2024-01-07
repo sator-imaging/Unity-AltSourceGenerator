@@ -1,5 +1,12 @@
-// NOTE: "abstract static" definition in interface requires C# 11.0 or later.
-//       following code is just for reference for future enhancement.
+/*
+ * Pending Update for C# 11.0+
+ * 
+ * NOTE: `abstract static` definition in interface is allowed in C# 11.0 or later.
+ *       the following code is just for reference for future enhancement.
+ *       currently, USG engine checks implementation using `System.Reflection`.
+ * 
+ */
+
 #if UNITY_2025_1_OR_NEWER
 
 using System.Text;

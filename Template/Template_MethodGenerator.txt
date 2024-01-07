@@ -13,7 +13,7 @@ using UnityEditor;
     //[UnitySourceGenerator(typeof(#SCRIPTNAME#), OverwriteIfFileExists = false)]
     public partial class #SCRIPTNAME#
     {
-#if UNITY_EDITOR   // USG: Generator methods should not be included in build
+#if UNITY_EDITOR   // USG: class definition is required to avoid build error but methods are not.
 #pragma warning disable IDE0051
 
         readonly static string MEMBER_ACCESS = "internal";
@@ -23,7 +23,7 @@ using UnityEditor;
         static bool Emit(USGContext context, StringBuilder sb)
         {
             // USG: static classes are IsAbstract is set.
-            if (!context.TargetClass.IsClass || context.TargetClass.IsAbstract)
+            if (!context.TargetClass.IsClass)
                 return false;  // return false to tell USG doesn't write file.
 
             // USG: you can modify output path. default file name is that USG generated.

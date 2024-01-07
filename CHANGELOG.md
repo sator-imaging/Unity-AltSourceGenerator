@@ -6,10 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [Unreleased](https://github.com/sator-imaging/Unity-AltSourceGenerator)
+
+- nothing yet
 
 
-## [2.0.0]()
+
+## [3.0.0](https://github.com/sator-imaging/Unity-AltSourceGenerator/releases/tag/v3.0.0)
+
+
+### API Changes 😉
+
+#### Features works only on Unity Editor
+
+classes moved to `Editor` namespace.
+
+#### `USGEngine.ProcessFile()` will be removed
+
+use `USGUtility.ForceGenerateByType(typeof(...))` instead.
+
+#### `USGUtility.**ByName()` will be removed
+
+methods still exist but obsolete. use `USGUtility.**ByType()` instead.
+
+
+
+## [2.0.0](https://github.com/sator-imaging/Unity-AltSourceGenerator/releases/tag/v2.0.0)
+
 
 ### Breaking Changes ;-)
 
@@ -26,7 +49,7 @@ now private. use `ProcessFile(path, *true*)` instead.
 
 `showInProjectPanel` now false by default.
 
-#### usg<T>(params string[] memberNames)
+#### usg\<T>(params string[] memberNames)
 
 `global::` namespace will be added.
 

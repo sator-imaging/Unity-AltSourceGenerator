@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-namespace SatorImaging.UnitySourceGenerator
+namespace SatorImaging.UnitySourceGenerator.Editor
 {
     public class ProjectSettingsData : ProjectSettingsSingleton<ProjectSettingsData>
     {

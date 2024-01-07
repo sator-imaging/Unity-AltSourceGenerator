@@ -1,11 +1,11 @@
 #if UNITY_EDITOR
 
-using System.IO;
+using System.Collections.Generic;
 using UnityEditor;
 
-namespace SatorImaging.UnitySourceGenerator
+namespace SatorImaging.UnitySourceGenerator.Editor
 {
-    static class EditorExtension
+    public static class EditorExtension
     {
         const string ROOT_MENU = @"Assets/Unity Source Generator/";
         const string TEMPLATE_PATH = @"Packages/com.sator-imaging.alt-source-generator/Template/Template_";
@@ -16,16 +16,23 @@ namespace SatorImaging.UnitySourceGenerator
         [MenuItem(ROOT_MENU + "Force Generate while Overwriting Disabled")]
         static void ForceGenerateSelectedScripts()
         {
+            if (Selection.assetGUIDs == null || Selection.assetGUIDs.Length == 0)
+                return;
+
             // NOTE: when multiple files selected, first import event initialize C# environment.
             //       --> https://docs.unity3d.com/2021.3/Documentation/Manual/DomainReloading.html
-            //       need to use USGEngine.ProcessFile() instead.
+            //       so that need to process files at once.
+            var filePathList = new List<string>(Selection.assetGUIDs.Length);
+
             foreach (var guid in Selection.assetGUIDs)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
-                //USGEngine.IgnoreOverwriteSettingOnAttribute = true;
-                //USGEngine.ProcessFile(path);
-                USGUtility.ForceGenerateByName(Path.GetFileNameWithoutExtension(path), false);
+                if (AssetDatabase.LoadAssetAtPath<MonoScript>(path) is not MonoScript)
+                    continue;
+
+                filePathList.Add(path);
             }
+            USGEngine.Process(filePathList.ToArray(), true);
         }
 
 

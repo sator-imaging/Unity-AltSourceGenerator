@@ -22,7 +22,8 @@ namespace SatorImaging.UnitySourceGenerator
 
         static MemberInfo[] GetMembers(Type cls, BindingFlags flags, string[] namesToIgnore)
         {
-            if (cls == null) throw new ArgumentNullException(nameof(cls));
+            if (cls == null)
+                throw new ArgumentNullException(nameof(cls));
 
 
             var members = cls.GetMembers(flags)
@@ -42,7 +43,8 @@ namespace SatorImaging.UnitySourceGenerator
         ///<summary>Try get value type of field or property.</summary>
         public static bool TryGetFieldOrPropertyType(MemberInfo info, out Type outType)
         {
-            if (info == null) throw new ArgumentNullException(nameof(info));
+            if (info == null)
+                throw new ArgumentNullException(nameof(info));
 
 
             outType = null;
@@ -68,7 +70,8 @@ namespace SatorImaging.UnitySourceGenerator
         public static Dictionary<string, TValue> GetEnumNamesAndValuesAsDictionary<TValue>(Type enumType)
             where TValue : struct
         {
-            if (enumType?.IsEnum != true) throw new ArgumentException(nameof(enumType));
+            if (enumType?.IsEnum != true)
+                throw new ArgumentException(nameof(enumType));
 
 
             var names = enumType.GetEnumNames();
@@ -91,7 +94,8 @@ namespace SatorImaging.UnitySourceGenerator
         public static (string[], TValue[]) GetEnumNamesAndValuesAsTuple<TValue>(Type enumType)
             where TValue : struct
         {
-            if (enumType?.IsEnum != true) throw new ArgumentException(nameof(enumType));
+            if (enumType?.IsEnum != true)
+                throw new ArgumentException(nameof(enumType));
 
             return (enumType.GetEnumNames(), enumType.GetEnumValues().Cast<TValue>().ToArray());
         }

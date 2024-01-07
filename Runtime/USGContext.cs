@@ -3,12 +3,11 @@ using System;
 
 namespace SatorImaging.UnitySourceGenerator
 {
-    // OPTIMIZE: Be ref struct
-    public class USGContext
+    public sealed class USGContext
     {
-        public Type TargetClass;
-        public string AssetPath;
-        public string OutputPath;
+        public Type TargetClass { get; init; }
+        public string AssetPath { get; init; }
+        public string OutputPath { get; set; }
 
     }
 }
