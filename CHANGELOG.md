@@ -8,52 +8,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased](https://github.com/sator-imaging/Unity-AltSourceGenerator)
 
+### TODO
+
 - nothing yet
 
 
 
 ## [3.0.0](https://github.com/sator-imaging/Unity-AltSourceGenerator/releases/tag/v3.0.0)
 
-
 ### API Changes 😉
 
-#### Features works only on Unity Editor
+- Features works only on Unity Editor
+    - classes moved to `Editor` namespace.
 
-classes moved to `Editor` namespace.
+- `USGEngine.ProcessFile()` will be removed
+    - methods still exist but obsolete.
+    - use `USGUtility.ForceGenerateByType(typeof(...))` instead.
 
-#### `USGEngine.ProcessFile()` will be removed
-
-use `USGUtility.ForceGenerateByType(typeof(...))` instead.
-
-#### `USGUtility.**ByName()` will be removed
-
-methods still exist but obsolete. use `USGUtility.**ByType()` instead.
+- `USGUtility.**ByName()` will be removed
+    - methods still exist but obsolete.
+    - use `USGUtility.**ByType()` instead.
 
 
 
 ## [2.0.0](https://github.com/sator-imaging/Unity-AltSourceGenerator/releases/tag/v2.0.0)
 
-
 ### Breaking Changes ;-)
 
-#### USGEngine.ProcessFile(string assetsRelPath)
+- USGEngine.ProcessFile(string assetsRelPath)
+    - signature changed
+    - `ProcessFile(string assetsRelPath, bool ignoreOverwriteSettingOnAttribute, bool autoRunReferencingEmittersNow = false)`
 
-signature changed:
-- `ProcessFile(string assetsRelPath, bool ignoreOverwriteSettingOnAttribute, bool autoRunReferencingEmittersNow = false)`
+- ~~public~~ static bool USGEngine.IgnoreOverwriteSettingByAttribute
+    - now private. use `ProcessFile(path, *true*)` instead.
 
-#### ~~public~~ static bool USGEngine.IgnoreOverwriteSettingByAttribute
+- USGUtility.ForceGenerateByName(string clsName, bool showInProjectPanel = *false*)
+    - `showInProjectPanel` now false by default.
 
-now private. use `ProcessFile(path, *true*)` instead.
+- usg\<T>(params string[] memberNames)
+    - `global::` namespace will be added.
 
-#### USGUtility.ForceGenerateByName(string clsName, bool showInProjectPanel = *false*)
-
-`showInProjectPanel` now false by default.
-
-#### usg\<T>(params string[] memberNames)
-
-`global::` namespace will be added.
-
-#### usg(Type cls, params string[] memberNames)
-
-signature changed:
-- `usg(object valueOrType, bool isFullName = true)`
+- usg(Type cls, params string[] memberNames)
+    - signature changed
+    - `usg(object valueOrType, bool isFullName = true)`
